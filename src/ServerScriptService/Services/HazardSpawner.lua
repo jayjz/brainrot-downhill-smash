@@ -80,10 +80,18 @@ function HazardSpawner:SpawnRandomHazard(position: Vector3?): ActiveHazard?
 	if not definition then return nil end
 	
 	local spawnPos = position or self:_GetValidSpawnPosition()
-	if not spawnPos then return nil end
+	if not spawnPos then 
+		print("[HazardSpawner] Failed to find valid spawn position")
+		return nil 
+	end
+	
+	print(`[HazardSpawner] Spawning {hazardType} at {spawnPos}`)
 	
 	local hazardInstance = self:_GetPooledHazard(hazardType) or self:_CreateHazardInstance(definition)
-	if not hazardInstance then return nil end
+	if not hazardInstance then 
+		print("[HazardSpawner] Failed to create hazard instance")
+		return nil 
+	end
 	
 	hazardInstance.CFrame = CFrame.new(spawnPos)
 	hazardInstance.AssemblyLinearVelocity = Vector3.new(

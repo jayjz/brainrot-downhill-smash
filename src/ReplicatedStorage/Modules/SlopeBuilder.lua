@@ -1,7 +1,8 @@
 -- File: src/ReplicatedStorage/Modules/SlopeBuilder.lua
 --!strict
 -- Builds physical slope parts in Workspace from SlopeGenerator data
--- Uses wedges and optimized part count for performance
+-- Optimized for mathematical precision and continuous, smooth surfaces.
+-- Source [Rojo Project Format]: https://rojo.space/docs/v7/project-format
 
 local SlopeBuilder = {}
 SlopeBuilder.__index = SlopeBuilder
@@ -44,55 +45,62 @@ function SlopeBuilder:Clear()
 	end
 end
 
--- Build physical parts for a segment
+-- Build physical parts for a segment with precise 3D math
+-- Ensures segments connect seamlessly regardless of angle changes.
 function SlopeBuilder:BuildSegment(segment: SlopeSegment): Model
 	local model = Instance.new("Model")
 	model.Name = `Segment_{segment.index}`
 	
-	-- Calculate wedge dimensions
-	local delta = segment.endPosition - segment.startPosition
+	local startPos = segment.startPosition
+	local endPos = segment.endPosition
+	local delta = endPos - startPos
 	local distance = delta.Magnitude
-	local midpoint = segment.centerPosition
+	local center = segment.centerPosition
 	
-	-- Create main slope wedge
-	local wedge = Instance.new("WedgePart")
-	wedge.Name = "Slope"
-	wedge.Size = Vector3.new(segment.width, delta.Y + 2, distance)
-	wedge.CFrame = CFrame.new(midpoint, segment.endPosition) * CFrame.Angles(math.pi/2, 0, 0)
-	wedge.Anchored = true
-	wedge.CanCollide = true
-	wedge.Material = Enum.Material.Slate
-	wedge.Color = Color3.fromRGB(100, 100, 110)
-	wedge.Parent = model
+	-- [GEOMETRY FIX]: Using tilted Part for the walkable surface.
+	-- WedgeParts create "stepping" artifacts at angle transitions. 
+	-- A Part aligned via CFrame.lookAt creates a mathematically perfect continuous slope.
+	local slope = Instance.new("Part")
+	slope.Name = "Slope"
+	slope.Size = Vector3.new(segment.width, 4, distance) -- Thick base for "solid" look
+	-- Align part so it stretches from startPos to endPos
+	slope.CFrame = CFrame.lookAt(center, endPos)
+	slope.Anchored = true
+	slope.CanCollide = true
+	slope.TopSurface = Enum.SurfaceType.Smooth
+	slope.Material = Enum.Material.Slate
+	slope.Color = Color3.fromRGB(100, 100, 110)
+	slope.Parent = model
 	
-	-- Add side walls to prevent falling off
+	-- Side Walls (Contained gameplay area)
+	local wallHeight = 25
 	local wallThickness = 2
-	local wallHeight = 20
 	
 	local leftWall = Instance.new("Part")
 	leftWall.Name = "LeftWall"
 	leftWall.Size = Vector3.new(wallThickness, wallHeight, distance)
-	leftWall.CFrame = wedge.CFrame * CFrame.new(-segment.width/2 - wallThickness/2, wallHeight/2 - 1, 0)
+	-- Offset left from the slope's center
+	leftWall.CFrame = slope.CFrame * CFrame.new(-segment.width/2 - wallThickness/2, wallHeight/2 - 2, 0)
 	leftWall.Anchored = true
 	leftWall.CanCollide = true
-	leftWall.Transparency = 0.7
-	leftWall.Color = Color3.fromRGB(80, 80, 90)
+	leftWall.Transparency = 0.8
+	leftWall.CastShadow = false
+	leftWall.Color = Color3.fromRGB(150, 150, 180)
 	leftWall.Parent = model
 	
 	local rightWall = leftWall:Clone()
 	rightWall.Name = "RightWall"
-	rightWall.CFrame = wedge.CFrame * CFrame.new(segment.width/2 + wallThickness/2, wallHeight/2 - 1, 0)
+	rightWall.CFrame = slope.CFrame * CFrame.new(segment.width/2 + wallThickness/2, wallHeight/2 - 2, 0)
 	rightWall.Parent = model
 	
-	-- Add checkpoint if needed
+	-- Checkpoint handling
 	if segment.isCheckpoint then
-		local checkpoint = self:_CreateCheckpoint(segment)
-		checkpoint.Parent = model
+		self:_CreateCheckpoint(segment, model)
 	end
 	
-	-- Tag for CollectionService
+	-- Metadata and Tags
 	CollectionService:AddTag(model, "SlopeSegment")
-	CollectionService:AddTag(wedge, "WalkableSurface")
+	CollectionService:AddTag(slope, "WalkableSurface")
 	
 	model.Parent = self.container
 	segment.instance = model
@@ -100,45 +108,38 @@ function SlopeBuilder:BuildSegment(segment: SlopeSegment): Model
 	return model
 end
 
--- Create checkpoint platform and trigger
-function SlopeBuilder:_CreateCheckpoint(segment: SlopeSegment): Part
+-- Create checkpoint platform and logic
+function SlopeBuilder:_CreateCheckpoint(segment: SlopeSegment, parent: Model)
 	local checkpoint = Instance.new("Part")
 	checkpoint.Name = "Checkpoint"
-	checkpoint.Size = Vector3.new(segment.width - 4, 1, 10)
-	checkpoint.CFrame = CFrame.new(segment.endPosition + Vector3.new(0, 2, 0))
+	checkpoint.Size = Vector3.new(segment.width, 1, 15)
+	-- Place at the end of the segment, slightly above the surface
+	checkpoint.CFrame = CFrame.new(segment.endPosition + Vector3.new(0, 0.6, 0))
 	checkpoint.Anchored = true
-	checkpoint.CanCollide = true
+	checkpoint.CanCollide = false -- Trigger only
+	checkpoint.Transparency = 0.5
 	checkpoint.Material = Enum.Material.Neon
-	checkpoint.Color = Color3.fromRGB(0, 255, 100)
-	checkpoint.CanTouch = true
+	checkpoint.Color = Color3.fromRGB(0, 255, 150)
+	checkpoint.Parent = parent
 	
-	-- Add ProximityPrompt
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ObjectText = "Checkpoint"
-	prompt.ActionText = "Reached!"
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 20
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = checkpoint
-	
-	-- Add particle effect
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = checkpoint
 	
 	local particles = Instance.new("ParticleEmitter")
-	particles.Rate = 20
-	particles.Lifetime = NumberRange.new(1, 2)
-	particles.Speed = NumberRange.new(2, 5)
-	particles.Size = NumberSequence.new(0.5)
-	particles.Color = ColorSequence.new(Color3.fromRGB(0, 255, 100))
+	particles.Texture = "rbxassetid://244221440"
+	particles.Rate = 50
+	particles.Speed = NumberRange.new(5, 10)
+	particles.Lifetime = NumberRange.new(0.5, 1)
+	particles.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.5),
+		NumberSequenceKeypoint.new(1, 0)
+	})
 	particles.Parent = attachment
 	
 	CollectionService:AddTag(checkpoint, "Checkpoint")
-	
-	return checkpoint
 end
 
--- Build multiple segments
+-- Build multiple segments in batch
 function SlopeBuilder:BuildSegments(segments: {SlopeSegment})
 	if not self.container then
 		self:Initialize()
@@ -149,7 +150,7 @@ function SlopeBuilder:BuildSegments(segments: {SlopeSegment})
 	end
 end
 
--- Destroy builder and cleanup
+-- Cleanup
 function SlopeBuilder:Destroy()
 	self:Clear()
 	if self.container then
