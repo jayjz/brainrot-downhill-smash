@@ -192,3 +192,102 @@ Per [InsertService Docs](https://create.roblox.com/docs/reference/engine/classes
 4. Add slow-mo effect on hit
 
 **Status:** 🟡 Phase 2 In Progress - Core systems implemented, integration pending
+
+## 2026-06-12 17:18 UTC - BRUTAL TRUTH AUDIT
+
+### What is ACTUALLY Completed on GitHub vs Claimed
+
+**CLAIMED:** "Phase 2: Hazards & Collision System - COMPLETE"  
+**ACTUAL:** Files exist but NOT integrated - 30% complete
+
+**Evidence:**
+```bash
+$ grep -n "hazardSpawner" GameManager.server.lua
+# Returns: NOTHING (before fix)
+$ grep -n "HazardCollisionDetector" GameManager.server.lua  
+# Returns: NOTHING (before fix)
+```
+
+**What was missing:**
+1. ❌ HazardSpawner never started (file existed, never called)
+2. ❌ CollisionDetector never started (file existed, never called)
+3. ❌ No client ragdoll listener (code doesn't exist)
+4. ❌ Result: Empty slope simulator, not a game
+
+**What was fixed in this commit:**
+1. ✅ Added `self.hazardSpawner = HazardSpawner.new()` to Init()
+2. ✅ Added `self.hazardSpawner:Start()` to StartRound()
+3. ✅ Added `self.collisionDetector = HazardCollisionDetector.new()` to Init()
+4. ✅ Added `self.collisionDetector:Start()` to StartRound()
+5. ✅ Added stop calls to EndRound()
+
+**Files changed:** GameManager.server.lua only
+**Lines added:** ~20 lines of integration code
+**Impact:** Transforms dead files into working systems
+
+### What Needs Work (Priority Order)
+
+**P0 - CRITICAL (Game doesn't work without these):**
+1. ⏳ Client-side ragdoll listener (doesn't exist yet)
+   - Need: Listen for HazardHit remote on client
+   - Need: Call RagdollController:EnableRagdoll()
+   - Location: Should be in MovementController or new file
+   - Time: 20 minutes
+
+2. ⏳ Test in Studio (integration not verified)
+   - Need: Actually run the game and verify hazards spawn
+   - Need: Verify collisions work
+   - Need: Verify ragdoll triggers (after #1 is done)
+   - Time: 15 minutes
+
+**P1 - HIGH (Game works but feels bad):**
+3. ⏳ Hazard spawn positions (currently random, may spawn inside slope)
+   - Need: Validate spawn positions are above slope surface
+   - Need: Raycast down to find valid spawn height
+   - Time: 30 minutes
+
+4. ⏳ Knockback tuning (currently 55 studs/sec, may be too strong/weak)
+   - Need: Playtest and adjust Config.PHYSICS.KNOCKBACK_BASE
+   - Time: 15 minutes
+
+**P2 - MEDIUM (Polish):**
+5. ⏳ Visual feedback for hits (Highlight exists but brief)
+6. ⏳ Sound effects (asset IDs in config but not played)
+7. ⏳ Particle effects on impact
+
+### Project Status in One Sentence
+
+**"Files exist for a complete game but they're not wired together; after this commit, hazards will actually spawn and collisions will work, but ragdoll still needs client-side integration to be playable."**
+
+### Recommendations
+
+**Immediate (Next 30 minutes):**
+1. Create client ragdoll listener (P0 #1 above)
+2. Test in Studio to verify integration works
+3. Fix any bugs found during testing
+
+**Short-term (Next 2 hours):**
+4. Tune hazard spawn rates and positions
+5. Add basic UI (stamina bar, score display)
+6. Test on mobile device
+
+**Before claiming "Phase 2 Complete":**
+- [ ] Hazards spawn and fall down slope
+- [ ] Player can be hit by hazards
+- [ ] Ragdoll triggers on hit
+- [ ] Player tumbles down slope realistically
+- [ ] Player recovers and can climb again
+- [ ] Loop is fun to play for 2+ minutes
+
+**Current completion:** ~60% (systems exist, integration in progress)  
+**Target for "Phase 2 Complete":** 100% (fully playable loop)
+
+### Lessons Learned
+
+**Don't claim completion until integration is done.** Having files in the repo means nothing if they're not wired together. The next commit should always be tested in Studio before pushing.
+
+**Integration is not optional.** It's not "polish" - it's the difference between a collection of files and a working game.
+
+---
+
+**Status:** 🟡 Phase 2 Integration In Progress - Core systems wired, client ragdoll pending
