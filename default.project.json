@@ -1,67 +1,79 @@
 {
-	"name": "BrainrotDownhillSmash",
-	"tree": {
-		"$className": "DataModel",
-		"ReplicatedStorage": {
-			"$className": "ReplicatedStorage",
-			"Modules": {
-				"$path": "src/ReplicatedStorage/Modules"
-			},
-			"Shared": {
-				"$path": "src/ReplicatedStorage/Shared"
-			},
-			"RemoteEvents": {
-				"$className": "Folder",
-				"PlayerScored": {
-					"$className": "RemoteEvent"
-				},
-				"RagdollTriggered": {
-					"$className": "RemoteEvent"
-				},
-				"HazardHit": {
-					"$className": "RemoteEvent"
-				}
-			}
-		},
-		"ServerScriptService": {
-			"$className": "ServerScriptService",
-			"Server": {
-				"$path": "src/ServerScriptService"
-			}
-		},
-		"ServerStorage": {
-			"$className": "ServerStorage",
-			"Assets": {
-				"$className": "Folder"
-			}
-		},
-		"StarterGui": {
-			"$className": "StarterGui",
-			"UI": {
-				"$path": "src/StarterGui"
-			}
-		},
-		"StarterPlayer": {
-			"$className": "StarterPlayer",
-			"StarterPlayerScripts": {
-				"$path": "src/StarterPlayer/StarterPlayerScripts"
-			},
-			"StarterCharacterScripts": {
-				"$className": "StarterPlayerScripts",
-				"$path": "src/StarterPlayer/StarterCharacterScripts"
-			}
-		},
-		"Workspace": {
-			"$className": "Workspace",
-			"StreamingEnabled": true,
-			"Terrain": {
-				"$className": "Terrain"
-			}
-		},
-		"Lighting": {
-			"$className": "Lighting",
-			"Brightness": 2,
-			"Ambient": [0.7, 0.7, 0.7]
-		}
-	}
+  "name": "BrainrotDownhillSmash",
+  "tree": {
+    "$className": "DataModel",
+    "$ignoreUnknownInstances": true,
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Modules": {
+        "$path": "src/ReplicatedStorage/Modules"
+      },
+      "Shared": {
+        "$path": "src/ReplicatedStorage/Shared"
+      },
+      "RemoteEvents": {
+        "$className": "Folder",
+        "PlayerScored": {
+          "$className": "RemoteEvent"
+        },
+        "RagdollTriggered": {
+          "$className": "RemoteEvent"
+        },
+        "HazardHit": {
+          "$className": "RemoteEvent"
+        },
+        "CheckpointReached": {
+          "$className": "RemoteEvent"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$path": "src/ServerScriptService"
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "Assets": {
+        "$className": "Folder",
+        "Hazards": {
+          "$className": "Folder"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$path": "src/StarterPlayer/StarterPlayerScripts"
+      },
+      "StarterCharacterScripts": {
+        "$path": "src/StarterPlayer/StarterCharacterScripts"
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "StreamingEnabled": true,
+        "StreamingTargetRadius": 500,
+        "StreamingMinRadius": 64
+      },
+      "SlopeContainer": {
+        "$className": "Folder"
+      },
+      "Terrain": {
+        "$className": "Terrain"
+      }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "Ambient": [
+          0.7,
+          0.7,
+          0.7
+        ],
+        "Brightness": 2,
+        "Technology": "Future"
+      }
+    }
+  }
 }
