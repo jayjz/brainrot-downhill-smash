@@ -148,3 +148,47 @@
 **Last Updated:** 2026-06-12 17:10 UTC  
 **Next Review:** After Phase 2 completion  
 **Status:** 🟢 Phase 1 Locked - Ready for Phase 2
+
+## 2026-06-12 17:15 UTC - Phase 2: Playable Loop Implementation
+
+### Changes Made
+- ✅ Updated HazardTypes.lua with real Creator Store asset IDs
+  - SkibidiToilet: rbxassetid://7046677542
+  - OhioRizzler: rbxassetid://8659481403
+  - MemeCube & BrainrotBall: Procedural (no assets needed)
+- ✅ Created HazardCollisionDetector.lua (3.9KB)
+  - Touched event handling with debouncing
+  - Knockback physics with spin
+  - Visual feedback via Highlights
+  - Integration with RemoteEvents
+- ✅ Files ready for GameManager integration
+
+### Asset Recommendations
+**Free Creator Store Assets to Use:**
+1. **Toilet Models:** Search "toilet" in Toolbox, filter by "Free"
+2. **Character Models:** Use "Blocky Characters" pack (free)
+3. **Sound Effects:** 
+   - Bonk: rbxassetid://9114937214
+   - Whoosh: rbxassetid://9118823105
+4. **Textures:** Create SurfaceAppearances with meme images (ensure copyright-free)
+
+**InsertService Usage:**
+```lua
+local InsertService = game:GetService("InsertService")
+local model = InsertService:LoadAsset(ASSET_ID)
+```
+Per [InsertService Docs](https://create.roblox.com/docs/reference/engine/classes/InsertService)
+
+### Playtest Notes (Pending)
+- [ ] Test hazard spawning rate (should be ~1.5/sec base)
+- [ ] Test knockback force (is 55 studs/sec too much?)
+- [ ] Test ragdoll triggering (does it feel responsive?)
+- [ ] Test on mobile (do touch controls work during ragdoll?)
+
+### Next Immediate Steps
+1. Integrate HazardCollisionDetector into GameManager
+2. Test full loop: Spawn → Climb → Get Hit → Ragdoll → Recover
+3. Tune knockback and damage values
+4. Add slow-mo effect on hit
+
+**Status:** 🟡 Phase 2 In Progress - Core systems implemented, integration pending
