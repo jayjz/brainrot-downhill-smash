@@ -1,14 +1,17 @@
--- File: src/ServerScriptService/GameManager.server.lua
+-- File: src/ServerScriptService/GameManager.server.lua (INTEGRATED)
 --!strict
--- Main game orchestrator with validated RemoteEvent handling
+-- Main game orchestrator with SlopeBuilder integration
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
+local SlopeGenerator = require(ReplicatedStorage.Modules.SlopeGenerator)
+local SlopeBuilder = require(ReplicatedStorage.Modules.SlopeBuilder)
 
 type PlayerData = Types.PlayerData
 type GameState = Types.GameState
@@ -18,18 +21,22 @@ local GameManager = {
 	players = {} :: {[number]: PlayerData},
 	startTime = 0 :: number,
 	roundNumber = 0 :: number,
+	slopeGenerator = nil :: any,
+	slopeBuilder = nil :: any,
 }
 
 -- Rate limiting for RemoteEvents
 local remoteEventLimits = {} :: {[Player]: {[string]: number}}
-local RATE_LIMIT_WINDOW = 1 -- second
+local RATE_LIMIT_WINDOW = 1
 local MAX_EVENTS_PER_WINDOW = 10
 
--- Initialize game services and connections
+-- Initialize game services
 function GameManager:Init()
 	print(`[{Config.GAME.NAME}] Initializing v{Config.GAME.VERSION}...`)
 	
 	self:_VerifyInstances()
+	self.slopeGenerator = SlopeGenerator.new()
+	self.slopeBuilder = SlopeBuilder.new()
 	
 	Players.PlayerAdded:Connect(function(player)
 		self:OnPlayerAdded(player)
@@ -45,120 +52,82 @@ function GameManager:Init()
 	
 	self:_SetupRemoteHandlers()
 	
-	print(`[{Config.GAME.NAME}] Initialization complete. State: {self.currentState}`)
+	print(`[{Config.GAME.NAME}] Ready. State: {self.currentState}`)
 end
 
--- Verify required instances exist
+-- Verify required instances
 function GameManager:_VerifyInstances()
-	local requiredPaths = {
+	local required = {
 		ReplicatedStorage.Modules,
 		ReplicatedStorage.Shared,
 		ReplicatedStorage.RemoteEvents,
-		ServerStorage.Assets,
 	}
 	
-	for _, instance in ipairs(requiredPaths) do
-		if not instance then
-			warn(`[GameManager] Missing required instance`)
+	for _, inst in ipairs(required) do
+		if not inst then
+			warn("[GameManager] Missing instance")
 		end
 	end
 end
 
--- Check rate limit for RemoteEvent
+-- Rate limit check
 function GameManager:_CheckRateLimit(player: Player, eventName: string): boolean
 	local now = os.clock()
-	
 	if not remoteEventLimits[player] then
 		remoteEventLimits[player] = {}
 	end
 	
-	local playerLimits = remoteEventLimits[player]
-	
-	if not playerLimits[eventName] then
-		playerLimits[eventName] = now
+	local limits = remoteEventLimits[player]
+	if not limits[eventName] then
+		limits[eventName] = now
 		return true
 	end
 	
-	local lastTime = playerLimits[eventName]
-	if now - lastTime < (RATE_LIMIT_WINDOW / MAX_EVENTS_PER_WINDOW) then
-		warn(`[GameManager] Rate limit exceeded for {player.Name} on {eventName}`)
+	if now - limits[eventName] < (RATE_LIMIT_WINDOW / MAX_EVENTS_PER_WINDOW) then
 		return false
 	end
 	
-	playerLimits[eventName] = now
+	limits[eventName] = now
 	return true
 end
 
--- Set up RemoteEvent connections with validation
+-- Setup RemoteEvent handlers with validation
 function GameManager:_SetupRemoteHandlers()
 	local remotes = ReplicatedStorage.RemoteEvents
 	
-	-- HazardHit: Validate player, hazardId, and damage
 	local hazardHit = remotes:FindFirstChild(Config.REMOTES.HAZARD_HIT) :: RemoteEvent
 	if hazardHit then
 		hazardHit.OnServerEvent:Connect(function(player, hazardId, damage)
-			if not self:_CheckRateLimit(player, "HazardHit") then
-				return
-			end
-			
-			-- Validate parameters
-			if typeof(hazardId) ~= "string" or typeof(damage) ~= "number" then
-				warn(`[GameManager] Invalid HazardHit parameters from {player.Name}`)
-				return
-			end
-			
-			if damage < 0 or damage > 100 then
-				warn(`[GameManager] Suspicious damage value from {player.Name}: {damage}`)
-				return
-			end
-			
+			if not self:_CheckRateLimit(player, "HazardHit") then return end
+			if typeof(hazardId) ~= "string" or typeof(damage) ~= "number" then return end
+			if damage < 0 or damage > 100 then return end
 			self:OnHazardHit(player, hazardId, damage)
 		end)
 	end
 	
-	-- PlayerScored: Validate points and reason
 	local playerScored = remotes:FindFirstChild(Config.REMOTES.PLAYER_SCORED) :: RemoteEvent
 	if playerScored then
 		playerScored.OnServerEvent:Connect(function(player, points, reason)
-			if not self:_CheckRateLimit(player, "PlayerScored") then
-				return
-			end
-			
-			if typeof(points) ~= "number" or typeof(reason) ~= "string" then
-				warn(`[GameManager] Invalid PlayerScored parameters from {player.Name}`)
-				return
-			end
-			
-			if points < 0 or points > 10000 then
-				warn(`[GameManager] Suspicious points from {player.Name}: {points}`)
-				return
-			end
-			
+			if not self:_CheckRateLimit(player, "PlayerScored") then return end
+			if typeof(points) ~= "number" or typeof(reason) ~= "string" then return end
+			if points < 0 or points > 10000 then return end
 			self:OnPlayerScored(player, points, reason)
 		end)
 	end
 	
-	-- CheckpointReached: Validate checkpoint data
 	local checkpointReached = remotes:FindFirstChild(Config.REMOTES.CHECKPOINT_REACHED) :: RemoteEvent
 	if checkpointReached then
 		checkpointReached.OnServerEvent:Connect(function(player, checkpointIndex, height)
-			if not self:_CheckRateLimit(player, "CheckpointReached") then
-				return
-			end
-			
-			if typeof(checkpointIndex) ~= "number" or typeof(height) ~= "number" then
-				warn(`[GameManager] Invalid CheckpointReached parameters from {player.Name}`)
-				return
-			end
-			
+			if not self:_CheckRateLimit(player, "CheckpointReached") then return end
+			if typeof(checkpointIndex) ~= "number" or typeof(height) ~= "number" then return end
 			self:OnCheckpointReached(player, checkpointIndex, height)
 		end)
 	end
 end
 
--- Handle player joining
+-- Player joined
 function GameManager:OnPlayerAdded(player: Player)
-	print(`[GameManager] Player joined: {player.Name} ({player.UserId})`)
+	print(`[GameManager] {player.Name} joined`)
 	
 	self.players[player.UserId] = {
 		userId = player.UserId,
@@ -181,78 +150,68 @@ function GameManager:OnPlayerAdded(player: Player)
 	end)
 end
 
--- Handle player leaving
+-- Player leaving
 function GameManager:OnPlayerRemoving(player: Player)
-	print(`[GameManager] Player leaving: {player.Name}`)
 	remoteEventLimits[player] = nil
 	self.players[player.UserId] = nil
 end
 
--- Handle character spawn
+-- Character added
 function GameManager:OnCharacterAdded(player: Player, character: Model)
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
-	
 	humanoid.WalkSpeed = Config.PLAYER.WALK_SPEED
 	humanoid.JumpPower = Config.PLAYER.JUMP_POWER
-	humanoid.MaxSlopeAngle = 85
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-	
+	humanoid.MaxSlopeAngle = 89
 	CollectionService:AddTag(character, "PlayerCharacter")
+	
+	-- Teleport to slope start if game is active
+	if self.currentState == "Playing" then
+		task.wait(0.5)
+		local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart
+		if rootPart then
+			rootPart.CFrame = CFrame.new(0, 10, 20)
+		end
+	end
 end
 
--- Handle hazard hit with validation
+-- Hazard hit
 function GameManager:OnHazardHit(player: Player, hazardId: string, damage: number)
-	local playerData = self.players[player.UserId]
-	if not playerData then
-		return
-	end
+	local data = self.players[player.UserId]
+	if not data then return end
 	
-	playerData.ragdollCount += 1
+	data.ragdollCount += 1
 	
 	local remote = ReplicatedStorage.RemoteEvents:FindFirstChild(Config.REMOTES.RAGDOLL_TRIGGERED) :: RemoteEvent
 	if remote then
 		remote:FireClient(player, hazardId, damage)
 	end
-	
-	print(`[GameManager] {player.Name} hit by hazard {hazardId}`)
 end
 
--- Handle player scoring with validation
+-- Player scored
 function GameManager:OnPlayerScored(player: Player, points: number, reason: string)
-	local playerData = self.players[player.UserId]
-	if not playerData then
-		return
+	local data = self.players[player.UserId]
+	if not data then return end
+	
+	data.score += points
+	if data.score > data.highScore then
+		data.highScore = data.score
 	end
-	
-	playerData.score += points
-	
-	if playerData.score > playerData.highScore then
-		playerData.highScore = playerData.score
-	end
-	
-	print(`[GameManager] {player.Name} +{points} ({reason}) = {playerData.score}`)
 end
 
--- Handle checkpoint reached
+-- Checkpoint reached
 function GameManager:OnCheckpointReached(player: Player, checkpointIndex: number, height: number)
-	local playerData = self.players[player.UserId]
-	if not playerData then
-		return
-	end
+	local data = self.players[player.UserId]
+	if not data then return end
 	
-	playerData.checkpointsReached += 1
-	playerData.totalDistance = math.max(playerData.totalDistance, height)
-	
-	-- Award checkpoint points
+	data.checkpointsReached += 1
+	data.totalDistance = math.max(data.totalDistance, height)
 	self:OnPlayerScored(player, Config.SCORING.CHECKPOINT_VALUE, `Checkpoint {checkpointIndex}`)
-	
-	print(`[GameManager] {player.Name} reached checkpoint {checkpointIndex} at height {height}`)
 end
 
--- Start a new round
+-- Start round - BUILDS SLOPE
 function GameManager:StartRound()
 	if self.currentState ~= "Waiting" then
-		warn("[GameManager] Cannot start round - invalid state")
+		warn("[GameManager] Cannot start - wrong state")
 		return
 	end
 	
@@ -260,38 +219,62 @@ function GameManager:StartRound()
 	self.currentState = "Countdown"
 	self.startTime = os.clock()
 	
-	print(`[GameManager] Round {self.roundNumber} starting...`)
+	print(`[GameManager] Building slope for round {self.roundNumber}...`)
 	
-	task.wait(3)
-	
-	self.currentState = "Playing"
-	print("[GameManager] Round active")
-end
-
--- End current round
-function GameManager:EndRound()
-	if self.currentState ~= "Playing" then
-		return
+	-- CRITICAL: Build the physical slope
+	if self.slopeGenerator and self.slopeBuilder then
+		self.slopeGenerator:Reset()
+		self.slopeBuilder:Initialize()
+		
+		-- Generate 20 segments for initial playtest
+		local segments = self.slopeGenerator:GenerateSegments(20)
+		self.slopeBuilder:BuildSegments(segments)
+		
+		print(`[GameManager] Built { #segments } slope segments`)
 	end
 	
+	-- Teleport all players to start
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character then
+			local rootPart = player.Character:FindFirstChild("HumanoidRootPart") :: BasePart
+			if rootPart then
+				rootPart.CFrame = CFrame.new(0, 10, 20)
+			end
+		end
+	end
+	
+	task.wait(3)
+	self.currentState = "Playing"
+	print("[GameManager] Round active - GO!")
+end
+
+-- End round
+function GameManager:EndRound()
+	if self.currentState ~= "Playing" then return end
 	self.currentState = "Ended"
 	print(`[GameManager] Round {self.roundNumber} ended`)
-	
 	task.wait(5)
 	self.currentState = "Waiting"
 end
 
--- Get player data
+-- Getters
 function GameManager:GetPlayerData(userId: number): PlayerData?
 	return self.players[userId]
 end
 
--- Get current game state
 function GameManager:GetState(): GameState
 	return self.currentState
 end
 
--- Initialize on require
+function GameManager:GetSlopeGenerator()
+	return self.slopeGenerator
+end
+
+function GameManager:GetSlopeBuilder()
+	return self.slopeBuilder
+end
+
+-- Initialize
 GameManager:Init()
 
 return GameManager
