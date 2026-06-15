@@ -72,16 +72,16 @@ def cleanup_sandbox(success):
     run_cmd(f"git branch -D {SANDBOX_BRANCH}", ignore_errors=True)
 
 # --- AI Agents ---
-def run_antigravity(prompt):
-    print_step("Invoking Antigravity CLI (Gemini 3.5 Flash)")
+def run_gemini_cli(prompt):
+    print_step("Invoking Gemini CLI")
     print(f"Task: {prompt}")
     
-    # Using full absolute path to the agy binary on Windows
-    cmd_str = f'"C:\\Users\\jcoul\\AppData\\Local\\agy\\bin\\agy.exe" "{prompt}"'
+    # Reverted to standard Gemini CLI call
+    cmd_str = f'gemini "{prompt}"'
     result = subprocess.run(cmd_str, shell=True)
     
     if result.returncode != 0:
-        print_error("Antigravity CLI encountered an error.")
+        print_error("Gemini CLI encountered an error.")
         return False
     return True
 
@@ -147,12 +147,12 @@ def main():
     while iteration <= MAX_ITERATIONS:
         print(f"\n{Colors.HEADER}=== LOOP ITERATION {iteration}/{MAX_ITERATIONS} ==={Colors.ENDC}")
         
-        if not run_antigravity(current_prompt):
+        if not run_gemini_cli(current_prompt):
             break
 
         modified_files = get_modified_lua_files()
         if not modified_files:
-            print_error("Antigravity finished but no .lua files were modified.")
+            print_error("Gemini CLI finished but no .lua files were modified.")
             break
 
         all_approved = True
@@ -169,7 +169,7 @@ def main():
             loop_successful = True
             break
         else:
-            print_warning("Critique failed. Formulating feedback for Antigravity...")
+            print_warning("Critique failed. Formulating feedback for Gemini...")
             feedback_prompt = "You modified some files, but the local code auditor rejected them. Fix the exact issues below:\n\n"
             feedback_prompt += "\n".join(combined_feedback)
             current_prompt = feedback_prompt
