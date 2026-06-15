@@ -1,6 +1,6 @@
--- File: src/ServerScriptService/Services/HazardSpawner.lua (ENHANCED)
+-- File: src/ServerScriptService/Services/HazardSpawner.lua
 --!strict
--- Enhanced with raycast-based slope surface spawning
+-- Enhanced with raycast-based slope surface spawning and InsertService loading
 
 local HazardSpawner = {}
 HazardSpawner.__index = HazardSpawner
@@ -12,6 +12,7 @@ local PhysicsService = game:GetService("PhysicsService")
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local InsertService = game:GetService("InsertService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -26,6 +27,13 @@ function HazardSpawner.new(): HazardSpawner
 	self.spawnRate = Config.HAZARDS.BASE_SPAWN_RATE
 	self.lastSpawnTime = 0 :: number
 	self.isActive = false
+	
+	-- Setup local asset cache
+	local assets = ServerStorage:FindFirstChild("Assets") or Instance.new("Folder", ServerStorage)
+	assets.Name = "Assets"
+	self.assetCache = assets:FindFirstChild("Hazards") or Instance.new("Folder", assets)
+	self.assetCache.Name = "Hazards"
+	
 	self:_SetupCollisionGroups()
 	return self
 end
@@ -81,15 +89,12 @@ function HazardSpawner:SpawnRandomHazard(position: Vector3?): ActiveHazard?
 	
 	local spawnPos = position or self:_GetValidSpawnPosition()
 	if not spawnPos then 
-		print("[HazardSpawner] Failed to find valid spawn position")
 		return nil 
 	end
 	
-	print(`[HazardSpawner] Spawning {hazardType} at {spawnPos}`)
-	
 	local hazardInstance = self:_GetPooledHazard(hazardType) or self:_CreateHazardInstance(definition)
 	if not hazardInstance then 
-		print("[HazardSpawner] Failed to create hazard instance")
+		warn(`[HazardSpawner] Failed to create hazard instance for {hazardType}`)
 		return nil 
 	end
 	
@@ -125,7 +130,6 @@ function HazardSpawner:SpawnRandomHazard(position: Vector3?): ActiveHazard?
 	return activeHazard
 end
 
--- ENHANCED: Raycast to find valid spawn position on slope surface
 function HazardSpawner:_GetValidSpawnPosition(): Vector3?
 	local players = Players:GetPlayers()
 	if #players == 0 then
@@ -140,7 +144,6 @@ function HazardSpawner:_GetValidSpawnPosition(): Vector3?
 	
 	local playerPos = character.PrimaryPart.Position
 	
-	-- Try multiple positions to find valid spawn above slope
 	for attempt = 1, 5 do
 		local offsetX = math.random(-30, 30)
 		local offsetZ = math.random(40, 100)
@@ -148,22 +151,19 @@ function HazardSpawner:_GetValidSpawnPosition(): Vector3?
 		local testZ = playerPos.Z - offsetZ
 		local testY = playerPos.Y + math.random(30, 60)
 		
-		-- Raycast down to find slope surface
 		local rayOrigin = Vector3.new(testX, testY, testZ)
 		local rayDirection = Vector3.new(0, -100, 0)
 		local raycastParams = RaycastParams.new()
 		raycastParams.FilterType = Enum.RaycastFilterType.Whitelist
-		raycastParams.FilterDescendantsInstances = {workspace.SlopeContainer}
+		raycastParams.FilterDescendantsInstances = {workspace:FindFirstChild("SlopeContainer")}
 		
 		local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 		
 		if result and result.Instance then
-			-- Found slope surface, spawn 10 studs above it
 			return result.Position + Vector3.new(0, 10, 0)
 		end
 	end
 	
-	-- Fallback: spawn at estimated height
 	return Vector3.new(
 		playerPos.X + math.random(-20, 20),
 		playerPos.Y + 40,
@@ -174,71 +174,104 @@ end
 function HazardSpawner:_GetPooledHazard(hazardType: string): BasePart?
 	local pool = self.hazardPool[hazardType]
 	if pool and #pool > 0 then
-		return table.remove(pool)
+		local instance = table.remove(pool)
+		if instance then
+			instance.Parent = workspace
+			return instance
+		end
 	end
 	return nil
 end
 
+-- ENHANCED: Prefer models via InsertService with local caching
 function HazardSpawner:_CreateHazardInstance(definition: any): BasePart?
-	local part: BasePart
+	local part: BasePart?
+	local hazardName = definition.name:gsub("%s+", "")
 	
-	if definition.assetId then
-		-- Try to load asset via InsertService
-		local InsertService = game:GetService("InsertService")
-		local success, asset = pcall(function()
-			return InsertService:LoadAsset(tonumber(definition.assetId:match("%d+")) or 0)
-		end)
-		
-		if success and asset then
-			local model = asset:FindFirstChildOfClass("Model")
-			if model and model.PrimaryPart then
-				part = model.PrimaryPart:Clone()
+	-- 1. Check local cache first
+	local cached = self.assetCache:FindFirstChild(hazardName)
+	if cached then
+		local clone = cached:Clone()
+		if clone:IsA("BasePart") then
+			part = clone
+		elseif clone:IsA("Model") then
+			part = clone.PrimaryPart or clone:FindFirstChildOfClass("BasePart")
+			if part then
+				part = part:Clone()
+				clone:Destroy()
+			end
+		end
+	end
+	
+	-- 2. Try InsertService if not cached
+	if not part and definition.assetId then
+		local assetId = tonumber(definition.assetId:match("%d+"))
+		if assetId then
+			local success, model = pcall(function()
+				return InsertService:LoadAsset(assetId)
+			end)
+			
+			if success and model then
+				-- Move to cache for future use
+				local mainObject = model:FindFirstChildOfClass("Model") or model:FindFirstChildOfClass("BasePart")
+				if mainObject then
+					mainObject.Name = hazardName
+					mainObject.Parent = self.assetCache
+					
+					-- Use a clone for the current hazard
+					local clone = mainObject:Clone()
+					if clone:IsA("BasePart") then
+						part = clone
+					elseif clone:IsA("Model") then
+						part = clone.PrimaryPart or clone:FindFirstChildOfClass("BasePart")
+						if part then
+							part = part:Clone()
+							clone:Destroy()
+						end
+					end
+				end
 				model:Destroy()
 			end
 		end
 	end
 	
-	-- Fallback to procedural part
+	-- 3. Fallback to procedural Part
 	if not part then
-		if definition.name:find("Ball") or definition.name:find("Sphere") then
+		if definition.name:find("Ball") or definition.name:find("Sphere") or definition.name:find("Barrel") then
 			part = Instance.new("Part")
 			part.Shape = Enum.PartType.Ball
 		else
 			part = Instance.new("Part")
 		end
 		part.Size = definition.size
-		part.Color = Color3.fromRGB(
-			math.random(100, 255),
-			math.random(50, 150),
-			math.random(50, 150)
-		)
+		part.Color = Color3.fromRGB(math.random(100, 255), math.random(100, 255), 100)
 		part.Material = Enum.Material.SmoothPlastic
 	end
 	
-	part.Name = definition.name
-	part.CanCollide = true
-	part.CanQuery = true
-	part.CanTouch = true
-	part.Massless = false
-	
-	local mass = definition.mass or 20
-	part.CustomPhysicalProperties = PhysicalProperties.new(mass, 0.3, 0.5, 0.5, 1)
-	
-	pcall(function()
-		part.CollisionGroup = "Hazards"
-	end)
-	
-	-- Add particle trail for visibility
-	local attachment = Instance.new("Attachment")
-	attachment.Parent = part
-	
-	local trail = Instance.new("Trail")
-	trail.Attachment0 = attachment
-	trail.Attachment1 = attachment
-	trail.Color = ColorSequence.new(part.Color)
-	trail.Lifetime = 0.3
-	trail.MinLength = 0.1
-	trail.Parent = part
+	-- Configure physics and metadata
+	if part then
+		part.Name = definition.name
+		part.CanCollide = true
+		part.Anchored = false
+		
+		local mass = definition.mass or 20
+		part.CustomPhysicalProperties = PhysicalProperties.new(mass, 0.3, 0.5, 0.5, 1)
+		
+		pcall(function()
+			part.CollisionGroup = "Hazards"
+		end)
+		
+		-- Add trail
+		local attachment = Instance.new("Attachment")
+		attachment.Parent = part
+		
+		local trail = Instance.new("Trail")
+		trail.Attachment0 = attachment
+		trail.Attachment1 = attachment
+		trail.Color = ColorSequence.new(part.Color)
+		trail.Lifetime = 0.3
+		trail.Parent = part
+	end
 	
 	return part
 end

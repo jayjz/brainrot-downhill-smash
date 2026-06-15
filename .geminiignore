@@ -1,0 +1,19 @@
+﻿# Environment & Secrets
+.env
+.env.*
+*.secret
+
+# Roblox/Rojo Build Artifacts
+*.rbxl
+*.rbxlx
+build/
+dist/
+
+# Git & Tooling
+.git/
+.github/
+.kb/
+
+# Node/Python Environments (if applicable)
+node_modules/
+venv/
