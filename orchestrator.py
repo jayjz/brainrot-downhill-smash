@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 import os
 import sys
 import subprocess
@@ -10,7 +10,7 @@ from urllib.error import URLError
 LOCAL_LLM_URL = "http://localhost:8080/v1/chat/completions"
 MAX_ITERATIONS = 3
 SANDBOX_BRANCH = "agent-sandbox"
-MAIN_BRANCH = "main" # Change this if your working branch is named differently
+MAIN_BRANCH = "main"
 
 # The Soul of the Critic
 CRITIC_SYSTEM_PROMPT = """You are a ruthless and precise Roblox Luau code auditor. 
@@ -75,8 +75,11 @@ def cleanup_sandbox(success):
 def run_antigravity(prompt):
     print_step("Invoking Antigravity CLI (Gemini 3.5 Flash)")
     print(f"Task: {prompt}")
-    # Using 'agy' for Antigravity CLI. We pipe the output to terminal so you can watch it think.
-    result = subprocess.run(f'agy "{prompt}"', shell=True)
+    
+    # Using full absolute path to the agy binary on Windows
+    cmd_str = f'"C:\\Users\\jcoul\\AppData\\Local\\agy\\bin\\agy.exe" "{prompt}"'
+    result = subprocess.run(cmd_str, shell=True)
+    
     if result.returncode != 0:
         print_error("Antigravity CLI encountered an error.")
         return False
@@ -87,7 +90,6 @@ def get_modified_lua_files():
     files = []
     for line in status.split('\n'):
         if line and line.endswith('.lua'):
-            # Extract file path from porcelain output (e.g., " M src/File.lua" -> "src/File.lua")
             filepath = line[3:]
             if os.path.exists(filepath):
                 files.append(filepath)
@@ -104,7 +106,7 @@ def critique_code(filepath):
             {"role": "system", "content": CRITIC_SYSTEM_PROMPT},
             {"role": "user", "content": f"Review this Roblox Luau file:\n\n{code_content}"}
         ],
-        "temperature": 0.0, # Zero variance for strict auditing
+        "temperature": 0.0,
         "max_tokens": 500
     }
 
@@ -136,22 +138,18 @@ def main():
         
     initial_prompt = sys.argv[1]
     
-    # 1. Isolate the workspace
     setup_sandbox()
     
     current_prompt = initial_prompt
     iteration = 1
     loop_successful = False
 
-    # 2. Start the ReAct Loop
     while iteration <= MAX_ITERATIONS:
         print(f"\n{Colors.HEADER}=== LOOP ITERATION {iteration}/{MAX_ITERATIONS} ==={Colors.ENDC}")
         
-        # Act
         if not run_antigravity(current_prompt):
             break
 
-        # Observe
         modified_files = get_modified_lua_files()
         if not modified_files:
             print_error("Antigravity finished but no .lua files were modified.")
@@ -160,14 +158,12 @@ def main():
         all_approved = True
         combined_feedback = []
 
-        # Critique
         for file in modified_files:
             approved, feedback = critique_code(file)
             if not approved:
                 all_approved = False
                 combined_feedback.append(f"File {file} failed audit: {feedback}")
 
-        # Resolve
         if all_approved:
             print_success("All files passed the local critic! Ready for Rojo sync.")
             loop_successful = True
@@ -178,11 +174,9 @@ def main():
             feedback_prompt += "\n".join(combined_feedback)
             current_prompt = feedback_prompt
             
-            # Undo the bad commit in the sandbox before retrying
             run_cmd("git reset --hard HEAD")
             iteration += 1
 
-    # 3. Finalize
     if not loop_successful and iteration > MAX_ITERATIONS:
         print_error("Max iterations reached. The agent failed to produce compliant code.")
         
