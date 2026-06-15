@@ -169,10 +169,18 @@ function GameManager:OnHazardHit(player: Player, hazardId: string, damage: numbe
     data.ragdollCount += 1
     
     local remotes = ReplicatedStorage:WaitForChild("RemoteEvents")
-    local remote = remotes:FindFirstChild(Config.REMOTES.RAGDOLL_TRIGGERED) :: RemoteEvent
-    if remote then
-        remote:FireClient(player, hazardId, damage)
+    local triggerRemote = remotes:FindFirstChild(Config.REMOTES.RAGDOLL_TRIGGERED) :: RemoteEvent
+    if triggerRemote then
+        triggerRemote:FireClient(player, hazardId, damage)
     end
+
+    -- Server-side validation: recovery is controlled by the server
+    task.delay(Config.PLAYER.RAGDOLL_RECOVERY_TIME, function()
+        local recoverRemote = remotes:FindFirstChild(Config.REMOTES.RAGDOLL_RECOVERED) :: RemoteEvent
+        if recoverRemote and player.Parent then
+            recoverRemote:FireClient(player)
+        end
+    end)
 end
 
 function GameManager:OnPlayerScored(player: Player, points: number, reason: string)

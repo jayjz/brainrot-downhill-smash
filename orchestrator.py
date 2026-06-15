@@ -73,11 +73,13 @@ def cleanup_sandbox(success):
 
 # --- AI Agents ---
 def run_gemini_cli(prompt):
-    print_step("Invoking Gemini CLI")
-    print(f"Task: {prompt}")
+    print_step("Invoking Gemini CLI (Headless Mode)")
     
-    # Reverted to standard Gemini CLI call
-    cmd_str = f'gemini "{prompt}"'
+    # Path guardrail injected into the prompt
+    strict_prompt = f"{prompt}\n\nCRITICAL: You must preserve the exact file paths (e.g. src/...). Do NOT write files to the root directory."
+    print(f"Task: {strict_prompt}")
+    
+    cmd_str = f'gemini -p "{strict_prompt}"'
     result = subprocess.run(cmd_str, shell=True)
     
     if result.returncode != 0:
@@ -90,7 +92,13 @@ def get_modified_lua_files():
     files = []
     for line in status.split('\n'):
         if line and line.endswith('.lua'):
-            filepath = line[3:]
+            # Handle Git renames (e.g., "R  old.lua -> new.lua")
+            if ' -> ' in line:
+                filepath = line.split(' -> ')[1].strip('"')
+            else:
+                # Strip the 2-character status code and space
+                filepath = line[3:].strip('"')
+                
             if os.path.exists(filepath):
                 files.append(filepath)
     return files

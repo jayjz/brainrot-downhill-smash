@@ -29,6 +29,7 @@ Config.PLAYER = {
     CLIMB_SPEED = 12,
     JUMP_POWER = 50,
     RAGDOLL_RECOVERY_TIME = 3, -- seconds
+    RAGDOLL_INVULNERABILITY = 1, -- seconds
 }
 
 -- Hazards
@@ -62,6 +63,7 @@ Config.REMOTES = {
     PLAYER_SCORED = "PlayerScored",
     RAGDOLL_TRIGGERED = "RagdollTriggered",
     CHECKPOINT_REACHED = "CheckpointReached",
+    RAGDOLL_RECOVERED = "RagdollRecovered",
 }
 
 -- [OPTIMIZATION]: Freeze tables to prevent accidental runtime mutations. 

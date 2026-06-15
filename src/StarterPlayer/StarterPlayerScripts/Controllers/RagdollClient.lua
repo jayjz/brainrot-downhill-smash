@@ -16,7 +16,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local player = Players.LocalPlayer
 local character: Model? = nil
 local humanoid: Humanoid? = nil
-local ragdollController: any = nil
+local ragdollController: any = nil -- We can't easily type this across modules without a shared interface
 local isRagdolled = false
 
 -- Initialize ragdoll client
@@ -36,6 +36,12 @@ function RagdollClient.Init()
 	local hazardHitRemote = ReplicatedStorage.RemoteEvents:WaitForChild("HazardHit") :: RemoteEvent
 	hazardHitRemote.OnClientEvent:Connect(function(hazardId: string, damage: number)
 		RagdollClient:TriggerRagdoll(hazardId, damage)
+	end)
+	
+	-- Listen for recovery signal from server
+	local recoverRemote = ReplicatedStorage.RemoteEvents:WaitForChild(Config.REMOTES.RAGDOLL_RECOVERED) :: RemoteEvent
+	recoverRemote.OnClientEvent:Connect(function()
+		RagdollClient:RecoverFromRagdoll()
 	end)
 	
 	-- Handle character respawn
@@ -96,11 +102,6 @@ function RagdollClient:TriggerRagdoll(hazardId: string, damage: number)
 	humanoid.AutoRotate = false
 	humanoid.WalkSpeed = 0
 	humanoid.JumpPower = 0
-	
-	-- Recovery timer
-	task.delay(Config.PLAYER.RAGDOLL_RECOVERY_TIME, function()
-		RagdollClient:RecoverFromRagdoll()
-	end)
 	
 	-- Visual feedback
 	RagdollClient:_PlayRagdollEffects()
