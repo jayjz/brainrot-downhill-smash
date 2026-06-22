@@ -12,6 +12,11 @@
 .DS_Store
 Thumbs.db
 
+#BAT FILES IGNORE
+*.bat
+
+
+
 # Logs
 *.log
 logs/

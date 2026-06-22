@@ -1,0 +1,6 @@
+{"timestamp":"2026-06-17T14:41:02.210Z","type":"mcp","status":"registered","instanceId":"ebaadf48-694d-4603-b333-c6dcc0de7f7f","message":"MCP registered — ebaadf48-694d-4603-b333-c6dcc0de7f7f"}
+{"timestamp":"2026-06-17T14:49:30.435Z","type":"mcp","status":"unregistered","instanceId":"ebaadf48-694d-4603-b333-c6dcc0de7f7f","message":"MCP unregistered — mcp","aiClientName":"mcp"}
+{"timestamp":"2026-06-17T14:51:56.463Z","type":"mcp","status":"registered","instanceId":"5de4e8e2-9a8d-4907-9c43-a67b5de9078e","message":"MCP registered — mcp","aiClientName":"mcp"}
+{"timestamp":"2026-06-17T14:51:57.019Z","type":"mcp","status":"unregistered","instanceId":"5de4e8e2-9a8d-4907-9c43-a67b5de9078e","message":"MCP unregistered — mcp","aiClientName":"mcp"}
+{"timestamp":"2026-06-17T14:52:45.619Z","type":"mcp","status":"registered","instanceId":"488251e6-9179-4a1d-86db-4fc3d03af826","message":"MCP registered — mcp","aiClientName":"mcp"}
+{"timestamp":"2026-06-17T15:01:16.093Z","type":"mcp","status":"unregistered","instanceId":"488251e6-9179-4a1d-86db-4fc3d03af826","message":"MCP unregistered — mcp","aiClientName":"mcp"}
