@@ -12,34 +12,29 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 
 ## Current Step
 
-### Step 2: Fix Missing RemoteEvent + Config Keys
+### Step 3: Fix Ragdoll Event Duplication
 **Status:** 📋 Planned — awaiting approval  
-**Priority:** P0 BLOCKER
+**Priority:** P1
 
 **Problem:**
-1. `RagdollRecovered` is in `Config.REMOTES` but missing from `default.project.json` → `GameManager:OnHazardHit` gets nil remote
-2. `MovementController.lua` references 6 Config keys that don't exist → runtime nil errors block playtesting:
-   - `STAMINA_MAX`, `SPRINT_SPEED`, `CLIMB_SPEED_STEEP`, `STAMINA_DRAIN_RATE`, `STAMINA_REGEN_RATE`, `JUMP_COOLDOWN`
+- CollisionDetector fires BOTH `HazardHit` + `RagdollTriggered`
+- GameManager:OnHazardHit ALSO fires `RagdollTriggered`
+- RagdollClient listens to BOTH events
+- Result: 2-3 duplicate ragdoll triggers per hit (guarded by isRagdolled flag, works but messy)
 
 **Changes:**
-- `default.project.json` — add `"RagdollRecovered": { "$className": "RemoteEvent" }`
-- `Config.lua` — add missing `PLAYER` keys with sensible defaults
+- `HazardCollisionDetector.lua` — remove `RagdollTriggered` fire, keep `HazardHit` only (server-side damage + knockback)
+- `RagdollClient.lua` — remove `HazardHit` listener, keep `RagdollTriggered` listener only
+- GameManager:OnHazardHit — unchanged, remains single source of truth for firing `RagdollTriggered` to client
 
-**Risk:** Low — config only, no logic changes  
-**Estimated lines:** ~10
+**Risk:** Low — event wiring only, no logic changes  
+**Estimated lines:** ~15 removed
 
 ---
 
 ## Backlog
 
 ### P0 — Blockers
-
-**Step 3: Fix Ragdoll Event Duplication**
-- CollisionDetector fires BOTH `HazardHit` + `RagdollTriggered`
-- GameManager:OnHazardHit ALSO fires `RagdollTriggered`
-- RagdollClient listens to BOTH events
-- Result: 2-3 duplicate ragdoll triggers per hit (guarded by isRagdolled flag, works but messy)
-- Fix: Single source of truth — CollisionDetector → HazardHit only, GameManager → RagdollTriggered only, RagdollClient listens to RagdollTriggered only
 
 **Step 4: Playtest — Verify Full Loop**
 - Slope generates ✓
@@ -101,6 +96,11 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 ---
 
 ## Completed Steps
+
+### ✅ Step 2: RemoteEvent + Config Keys (`ccfe057`)
+- `default.project.json` — added `RagdollRecovered` RemoteEvent
+- `Config.lua` — added 6 missing `PLAYER` keys: `SPRINT_SPEED`, `CLIMB_SPEED_STEEP`, `JUMP_COOLDOWN`, `STAMINA_MAX`, `STAMINA_DRAIN_RATE`, `STAMINA_REGEN_RATE`
+- **Result:** MovementController no longer crashes on first frame. Ragdoll recovery signal can fire correctly. Fixes BUG-002 + BUG-006.
 
 ### ✅ Step 1: Client/Server Entry Points (`7cfa4aa`)
 - Created `ServerMain.server.lua` — requires GameManager, calls Init() with error handling, cleanup on BindToClose

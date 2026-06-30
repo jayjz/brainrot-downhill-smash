@@ -70,9 +70,34 @@ Step 2: Fix missing RagdollRecovered RemoteEvent (BUG-002) — 1-line JSON chang
 
 ---
 
+## 2026-06-30 — Step 2: RemoteEvent + Config Keys
+
+**Scope:** `ccfe057` — default.project.json + Config.lua — 2 files, +9 lines
+
+### What Was Good
+- **Minimal change** — 1 RemoteEvent added to project config, 6 Config keys added with sensible defaults, zero logic changes
+- **Config values match audit notes** — Stamina drain/regen rates match the Phase 1 validation log in MEMORY.md (drain 15/sec = 6.67s to empty, regen 25/sec = 4s to full)
+- **Centralized config** — All 6 missing keys added to `Config.PLAYER` in one place, no scattered magic numbers
+- **Fixes 2 P0 blockers in one commit** — BUG-002 (RemoteEvent) + BUG-006 (Config keys) both resolved
+
+### What Could Be Improved
+- Nothing — this was a pure config fix, no logic to critique. Values are reasonable defaults that can be tuned during playtesting (Step 5).
+
+### Risks
+- **None.** Config-only changes, values match existing code expectations, no logic modified.
+
+### Verdict
+✅ **Approved** — Fixes 2 P0 blockers with minimal, correct changes. Playtesting is now unblocked once BUG-003 (event duplication) is cleaned up.
+
+### Next Steps
+Step 3: Fix ragdoll event duplication (BUG-003) — remove duplicate event fires, single source of truth. Then Step 4: Playtest full loop in Studio.
+
+---
+
 ## Review History
 
 | Date | Scope | Verdict |
 |------|-------|---------|
+| 2026-06-30 | Step 2: RemoteEvent + Config keys (`ccfe057`) | ✅ Approved |
 | 2026-06-30 | Step 1: Client/Server entry points (`7cfa4aa`) | ✅ Approved |
 | 2026-06-30 | Full Phase 2 integration audit | Blocked — missing entry points |

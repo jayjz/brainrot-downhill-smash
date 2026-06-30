@@ -44,6 +44,38 @@ Chronological development log.
 
 ---
 
+## 2026-06-30
+
+### `7cfa4aa` — Step 1: Client/Server entry points
+**Date:** 2026-06-30
+
+**What was done:**
+- Created `ServerMain.server.lua` — server entry point, requires GameManager, calls Init() with error handling, cleanup on BindToClose
+- Created `ClientMain.client.lua` — client entry point, requires MovementController, CameraController, RagdollClient in order with error handling
+- Removed auto-Init() calls from `GameManager.lua`, `MovementController.lua`, `CameraController.lua`, `RagdollClient.lua`
+- Added `GameManager:Destroy()` for proper cleanup
+
+**Impact:** Game now actually runs on startup. Controllers initialize via explicit entry points instead of ModuleScript side effects. Fixes BUG-001.
+
+---
+
+### `ccfe057` — Step 2: RemoteEvent + Config keys
+**Date:** 2026-06-30
+
+**What was done:**
+- `default.project.json` — added `RagdollRecovered` RemoteEvent (fixes BUG-002)
+- `Config.lua` — added 6 missing `PLAYER` keys:
+  - `SPRINT_SPEED = 24`
+  - `CLIMB_SPEED_STEEP = 8`
+  - `JUMP_COOLDOWN = 0.5`
+  - `STAMINA_MAX = 100`
+  - `STAMINA_DRAIN_RATE = 15`
+  - `STAMINA_REGEN_RATE = 25`
+
+**Impact:** MovementController will no longer crash on first frame with nil Config values. Ragdoll recovery signal can now fire correctly. Unblocks playtesting. Fixes BUG-002 + BUG-006.
+
+---
+
 ## Phase 1 — Complete ✅
 
 | Module | Lines | Status |
@@ -52,7 +84,7 @@ Chronological development log.
 | SlopeBuilder.lua | 162 | ✅ Physical wedge generation |
 | MovementController.lua | 384 | ✅ Climbing physics, stamina, mobile+gamepad |
 | CameraController.lua | 217 | ✅ Dynamic camera, collision avoidance |
-| Config.lua | ~70 | ✅ Frozen tables, zero magic numbers |
+| Config.lua | ~80 | ✅ Frozen tables, zero magic numbers |
 | Types.lua | ~40 | ✅ Luau strict mode exports |
 | GameManager.lua | 297 | ✅ Round management, rate limiting |
 
@@ -69,27 +101,12 @@ Chronological development log.
 | HazardCollisionDetector.lua | ✅ Touched events, knockback, highlights |
 | RagdollController.lua | ✅ BallSocketConstraint ragdoll, momentum preservation |
 | RagdollClient.lua | ✅ Client listener, recovery logic |
+| ServerMain.server.lua | ✅ Entry point, error handling |
+| ClientMain.client.lua | ✅ Entry point, error handling |
 
-**Blockers:**
-- No entry point scripts — game does nothing on startup
-- Missing `RagdollRecovered` RemoteEvent in project config
-- Ragdoll event duplication (2-3 triggers per hit)
+**Remaining blockers:**
+- Ragdoll event duplication (2-3 triggers per hit) — BUG-003
 - Never tested in Studio
-
----
-
-## 2026-06-30
-
-### `7cfa4aa` — Step 1: Client/Server entry points
-**Date:** 2026-06-30
-
-**What was done:**
-- Created `ServerMain.server.lua` — server entry point, requires GameManager, calls Init() with error handling, cleanup on BindToClose
-- Created `ClientMain.client.lua` — client entry point, requires MovementController, CameraController, RagdollClient in order with error handling
-- Removed auto-Init() calls from `GameManager.lua`, `MovementController.lua`, `CameraController.lua`, `RagdollClient.lua`
-- Added `GameManager:Destroy()` for proper cleanup
-
-**Impact:** Game now actually runs on startup. Controllers initialize via explicit entry points instead of ModuleScript side effects. Foundation for Step 2-4 testing.
 
 ---
 
