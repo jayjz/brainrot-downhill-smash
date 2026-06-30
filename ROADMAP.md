@@ -5,63 +5,82 @@ High-level project goals and phases.
 ---
 
 ## Vision
-Viral meme physics chaos runner that beats "Climb to Steal Brainrot". Climb an increasingly steep slope while dodging viral meme hazards with full ragdoll physics. Clip-worthy tumbles, 30-second core loop, infinite replayability.
+Viral meme physics **downhill** chaos runner. Spawn at the top of a steep procedural slope, slide/ragdoll down at high speed, dodge physics-based meme hazards (brainrot toilets, barrels, crates). Reach the goal at the bottom. Clip-worthy tumbles, 30-second core loop, infinite replayability.
+
+**Asset Strategy:** Procedural first, InsertService second. See [ASSETS.md](ASSETS.md).
 
 ---
 
-## Phase 1: Slope + Movement ✅ COMPLETE
-**Goal:** Playable climbing with stamina system
+## Phase 1: Make It Playable ✅ COMPLETE
+**Goal:** End-to-end playable loop with free/procedural assets
 
+### 1A: Foundation (Complete)
 - [x] Procedural slope generation (SlopeGenerator)
 - [x] Physical slope building (SlopeBuilder)
-- [x] Climbing movement controller with stamina
+- [x] Movement controller (originally climbing-focused, retuned for downhill)
 - [x] Dynamic camera with collision avoidance
 - [x] Mobile + gamepad support
 - [x] Config-driven, --!strict compliant
 
-**Status:** Shipped, code reviewed, approved
-
----
-
-## Phase 2: Hazards + Ragdoll 🟡 IN PROGRESS
-**Goal:** Full playable game loop — climb, get hit, ragdoll, recover
-
-- [x] Hazard types defined with asset IDs
-- [x] Hazard spawner with object pooling
+### 1B: Hazards + Ragdoll (Complete)
+- [x] Hazard types with InsertService asset IDs + procedural fallback
+- [x] Hazard spawner with object pooling + raycast validation
 - [x] Collision detection with knockback
 - [x] Ragdoll controller (BallSocketConstraints)
 - [x] Client-side ragdoll listener
-- [ ] Entry point scripts (ServerMain / ClientMain) ← **BLOCKED**
-- [ ] RemoteEvent wiring cleanup ← **BLOCKED**
-- [ ] Studio playtest — verify full loop ← **BLOCKED**
-- [ ] Gameplay tuning (knockback, spawn rate, recovery time)
+- [x] ServerMain / ClientMain entry points
+- [x] RemoteEvent wiring cleanup
+- [x] Config key fixes
 
-**Target:** Fully playable, fun for 2+ minutes straight  
-**Estimated:** 1-2 days (after blockers fixed)
+### 1C: Playable Loop (In Progress)
+- [ ] Auto-start round on server boot
+- [ ] Player spawn at top of slope
+- [ ] Downhill movement tuning (gravity-assisted, steering)
+- [ ] Goal zone detection + scoring
+- [ ] Round restart flow
+- [ ] Basic UI (health, distance to goal, score)
+- [ ] Studio playtest — verify full loop works
+
+**Target:** Fully playable in Studio, fun for 2+ minutes  
+**Status:** Foundation complete, playable loop in progress (Step 4)
 
 ---
 
-## Phase 3: Juice + Progression
-**Goal:** Make it feel good, add progression hooks
+## Phase 2: Juice + Polish
+**Goal:** Make it feel good
 
-- [ ] Basic UI (health bar, score, stamina, height)
-- [ ] Sound effects (hit, whoosh, background music)
+- [ ] Sound effects (hit, whoosh, goal fanfare, background music)
 - [ ] Particle effects on impact
 - [ ] Screen shake / slow-mo tuning
-- [ ] Score multipliers for checkpoints
-- [ ] Difficulty progression (spawn rate scales with height)
-- [ ] Game over / restart flow
+- [ ] Speed lines / motion blur at high velocity
+- [ ] Camera FOV increase at speed
+- [ ] Damage numbers / hit markers
+- [ ] Gameplay tuning (knockback, spawn rate, ragdoll recovery, slope steepness)
 
 **Target:** Polished enough for playtesting with friends  
 **Estimated:** 3-5 days
 
 ---
 
+## Phase 3: Progression + Replayability
+**Goal:** Keep players coming back
+
+- [ ] Score multipliers (near-miss, speed bonus)
+- [ ] Difficulty progression (spawn rate scales with distance/speed)
+- [ ] Multiple slope biomes / themes
+- [ ] Leaderboards (fastest time to goal)
+- [ ] Daily challenges
+- [ ] Cosmetic unlocks
+
+**Target:** Retention hooks in place  
+**Estimated:** 1-2 weeks
+
+---
+
 ## Phase 4: Social + Multiplayer
 **Goal:** Multiplayer chaos, social features
 
-- [ ] 6-8 player servers
-- [ ] Leaderboards (DataStoreService)
+- [ ] 6-8 player servers (simultaneous downhill race)
 - [ ] Spectator mode
 - [ ] Emotes / reactions
 - [ ] Friend invites
@@ -78,7 +97,6 @@ Viral meme physics chaos runner that beats "Climb to Steal Brainrot". Climb an i
 - [ ] Performance optimization (target 60 FPS on low-end mobile)
 - [ ] Anti-cheat hardening
 - [ ] Shop / cosmetic system
-- [ ] Daily challenges
 - [ ] Seasonal events
 - [ ] Analytics / telemetry
 - [ ] Monetization (game passes, cosmetics)
@@ -90,7 +108,7 @@ Viral meme physics chaos runner that beats "Climb to Steal Brainrot". Climb an i
 
 ## Success Metrics
 
-| Metric | Phase 2 Target | Launch Target |
+| Metric | Phase 1 Target | Launch Target |
 |--------|---------------|---------------|
 | Playable loop | ✅ Yes | ✅ Yes |
 | Fun for 2+ min | TBD | ✅ Yes |
@@ -104,9 +122,9 @@ Viral meme physics chaos runner that beats "Climb to Steal Brainrot". Climb an i
 
 ## Current Status
 
-**Phase:** 2 — Hazards + Ragdoll  
-**Completion:** ~75% (systems exist, integration broken)  
-**Blockers:** Missing entry points, event wiring cleanup, no Studio test  
-**Next milestone:** Playable loop verified in Studio
+**Phase:** 1C — Playable Loop  
+**Completion:** ~75% (foundation solid, loop wiring in progress)  
+**Blockers:** Round auto-start, spawn positioning, downhill movement tuning, goal zone  
+**Next milestone:** Playable loop verified in Studio (Step 4)
 
 See [PLAN.md](PLAN.md) for immediate next steps.

@@ -4,6 +4,37 @@ Self-review log for major changes.
 
 ---
 
+## 2026-06-30 — Project Pivot: Uphill Climb → Downhill Smash + Asset Strategy
+
+**Scope:** Documentation refactor — PLAN.md, ROADMAP.md, BUGS.md, new ASSETS.md
+
+### Context
+Original design: uphill climbing game with stamina system ("Climb to Steal Brainrot" competitor). Implemented: slope generator (uphill), climbing movement controller with stamina drain, hazard spawner (hazards fall down toward climbing player).
+
+Pivot: **downhill chaos runner**. Spawn at top, slide/ragdoll down, dodge hazards, reach goal. Matches repo name ("downhill-smash"), simpler mechanically (gravity does the work), more clip-worthy (high-speed tumbles), better fits meme physics chaos genre.
+
+### What Changed
+- **Game direction:** Uphill climb + stamina → Downhill slide + steering
+- **Asset strategy:** Formalized "procedural first, InsertService second" — see [ASSETS.md](ASSETS.md)
+- **Phase structure:** Phase 1 redefined as "Make It Playable" (was "Slope + Movement"), Phase 2 becomes "Juice + Polish"
+- **MovementController:** Climbing-focused, needs retuning for downhill (remove stamina drain, increase speed, add steering/braking)
+- **SlopeGenerator:** Builds uphill (increasing Y), needs direction fix OR spawn player at top and let gravity pull down
+- **New modules planned:** `GoalZone.lua` + `GoalService.lua` for finish line detection
+- **New bug filed:** BUG-008 — sound effects not wired up (`soundId` fields exist in `HazardTypes`, never played)
+
+### Risks
+- **Medium — MovementController rewrite scope:** Controller is 384 lines built around climbing + stamina. Retuning for downhill may be closer to a rewrite than a tune. Mitigation: disable stamina system entirely for MVP, set WalkSpeed = 24, let gravity + Humanoid do the work, iterate from there.
+- **Low — Slope direction:** SlopeGenerator builds uphill. Either invert the math OR spawn at top and flip camera. Spawning at top is simpler, no SlopeGenerator changes needed for first playtest.
+- **Low — Asset IDs unverified:** InsertService IDs in `HazardTypes.lua` never tested in Studio. Mitigation: procedural fallback ensures game always works. See [ASSETS.md](ASSETS.md) verification checklist.
+
+### Verdict
+✅ **Approved pivot** — Downhill is simpler, funnier, more viral. Procedural-first asset strategy is correct — game must be playable with zero external dependencies. InsertService is flair, not a requirement.
+
+### Next Steps
+Step 4: Auto-start round + spawn at top + goal zone + downhill movement tuning. Make the game actually playable end-to-end in Studio.
+
+---
+
 ## 2026-06-30 — Phase 2 Integration Audit
 
 **Scope:** Full codebase review — server modules, client controllers, config, project setup
@@ -117,7 +148,7 @@ Step 3: Fix ragdoll event duplication (BUG-003) — remove duplicate event fires
 ✅ **Approved** — Callback injection is the right pattern for breaking the circular dependency. Event flow is now clean, single source of truth, proper separation of concerns. The orphaned `HazardHit` OnServerEvent handler is tech debt but not blocking — flag for cleanup in Phase 3.
 
 ### Next Steps
-Step 4: Playtest full loop in Studio — verify slope generates, player can climb, hazards spawn, collision detects hit, ragdoll triggers, player tumbles, recovers, can climb again, no console errors.
+Step 4: Auto-start round + spawn at top + goal zone + downhill movement tuning. Make the game actually playable end-to-end in Studio.
 
 ---
 
@@ -125,6 +156,7 @@ Step 4: Playtest full loop in Studio — verify slope generates, player can clim
 
 | Date | Scope | Verdict |
 |------|-------|---------|
+| 2026-06-30 | Pivot: Uphill → Downhill + Asset Strategy | ✅ Approved |
 | 2026-06-30 | Step 3: Ragdoll event duplication (`da65136`) | ✅ Approved |
 | 2026-06-30 | Step 2: RemoteEvent + Config keys (`ccfe057`) | ✅ Approved |
 | 2026-06-30 | Step 1: Client/Server entry points (`7cfa4aa`) | ✅ Approved |

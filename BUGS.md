@@ -17,12 +17,18 @@ _None — all P1 blockers fixed._
 **Found:** 2026-06-12
 
 **Description:** Creator Store asset IDs in `HazardTypes.lua` may not exist or may not be what they claim:
-- SkibidiToilet: `rbxassetid://7046677542`
-- OhioRizzler: `rbxassetid://8659481403`
+- Toilet: `rbxassetid://14094546528`
+- Dummy NPC: `rbxassetid://5056319657`
+- Wooden Crate: `rbxassetid://17459437262`
+- Oil Barrel: `rbxassetid://1309245904`
 
-**Impact:** InsertService load fails → fallback to procedural colored parts. Game works but looks boring.
+Sound assets also unverified:
+- Hit SFX: `rbxassetid://9114937214`
+- Whoosh SFX: `rbxassetid://9118823105`
 
-**Fix:** Verify IDs in Studio, find real free assets, or stick with procedural and improve visuals.
+**Impact:** InsertService load fails → fallback to procedural colored Parts. Game works but looks/sounds boring.
+
+**Fix:** Verify IDs in Studio, find real free assets, or stick with procedural and improve visuals. See [ASSETS.md](ASSETS.md) for verification checklist.
 
 ---
 
@@ -47,6 +53,18 @@ _None — all P1 blockers fixed._
 **Impact:** Exploit path — client can self-ragdoll. Rate-limited (10/sec) and validated, not game-breaking (they ragdoll themselves), but confusing API design.
 
 **Fix:** Either (a) remove the `OnServerEvent` handler entirely — server-authoritative collision detection, clients never report hits, or (b) rename `HazardHit` → `ReportHazardHit` to make client→server direction explicit, and have the handler apply damage/knockback server-side.
+
+---
+
+### BUG-008: Sound effects not wired up
+**Status:** Open  
+**Found:** 2026-06-30
+
+**Description:** `soundId` fields exist in `HazardTypes.Definitions` but are never played. `RagdollClient:_PlayRagdollEffects()` has a stub with no audio. `HazardCollisionDetector:_OnHazardTouched()` has no sound playback.
+
+**Impact:** Game is silent on hit — hurts game feel significantly.
+
+**Fix:** Add `Sound` instance playback in `RagdollClient:_PlayRagdollEffects()` (play `definition.soundId`) and `HazardCollisionDetector:_OnHazardTouched()`.
 
 ---
 

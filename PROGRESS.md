@@ -94,36 +94,47 @@ Chronological development log.
 
 ---
 
-## Phase 1 — Complete ✅
+### `TBD` — Pivot to downhill + free asset strategy
+**Date:** 2026-06-30
 
-| Module | Lines | Status |
-|--------|-------|--------|
-| SlopeGenerator.lua | 127 | ✅ Procedural math, trig-based |
-| SlopeBuilder.lua | 162 | ✅ Physical wedge generation |
-| MovementController.lua | 384 | ✅ Climbing physics, stamina, mobile+gamepad |
-| CameraController.lua | 217 | ✅ Dynamic camera, collision avoidance |
-| Config.lua | ~80 | ✅ Frozen tables, zero magic numbers |
-| Types.lua | ~40 | ✅ Luau strict mode exports |
-| GameManager.lua | 297 | ✅ Round management, rate limiting |
+**What was done:**
+- Created `ASSETS.md` — asset strategy (procedural first, InsertService second), free asset inventory, verification checklist
+- Rewrote `PLAN.md` — new "Making the Game Playable (Free Assets)" section, Step 4 redefined as auto-start round + spawn + goal zone + downhill movement tuning
+- Rewrote `ROADMAP.md` — Phase 1 redefined as "Make It Playable", uphill→downhill pivot, asset strategy integrated
+- Updated `BUGS.md` — added BUG-008 (sound effects not wired up), updated BUG-004 asset IDs to match current `HazardTypes.lua`
+- Updated `REVIEW.md` — added pivot notes
 
-**Total:** ~1,600 lines of production code
+**Impact:** Project direction clarified — downhill chaos runner (not uphill climber), procedural assets primary, InsertService secondary with fallback. Control files aligned with playable-loop goal.
 
 ---
 
-## Phase 2 — In Progress 🟡
+## Phase 1 — Make It Playable 🟡 IN PROGRESS
 
-| Module | Status |
-|--------|--------|
-| HazardTypes.lua | ✅ 4 hazard types with asset IDs |
-| HazardSpawner.lua | ✅ Spawn logic, pooling, raycast validation |
-| HazardCollisionDetector.lua | ✅ Touched events, knockback, highlights, GameManager callback |
-| RagdollController.lua | ✅ BallSocketConstraint ragdoll, momentum preservation |
-| RagdollClient.lua | ✅ Client listener, recovery logic, single event source |
-| ServerMain.server.lua | ✅ Entry point, error handling |
-| ClientMain.client.lua | ✅ Entry point, error handling |
+| Module | Status | Notes |
+|--------|--------|-------|
+| SlopeGenerator.lua | ✅ | Procedural math, trig-based — may need downhill direction fix |
+| SlopeBuilder.lua | ✅ | Physical wedge generation |
+| MovementController.lua | ⚠️ | Climbing-focused, needs downhill retuning |
+| CameraController.lua | ✅ | Dynamic camera, collision avoidance |
+| Config.lua | ✅ | Frozen tables, zero magic numbers |
+| Types.lua | ✅ | Luau strict mode exports |
+| GameManager.lua | ⚠️ | Round management works, needs auto-start + spawn positioning |
+| HazardTypes.lua | ✅ | 4 hazard types, InsertService IDs + procedural fallback |
+| HazardSpawner.lua | ✅ | Spawn logic, pooling, raycast validation |
+| HazardCollisionDetector.lua | ✅ | Touched events, knockback, GameManager callback |
+| RagdollController.lua | ✅ | BallSocketConstraint ragdoll, momentum preservation |
+| RagdollClient.lua | ✅ | Client listener, recovery logic, single event source |
+| ServerMain.server.lua | ✅ | Entry point, error handling |
+| ClientMain.client.lua | ✅ | Entry point, error handling |
 
-**Remaining blockers:**
-- Never tested in Studio — all integration is theoretical
+**Missing for playable loop:**
+- Auto-start round on server boot
+- Player spawn at top of slope (currently spawns at default position)
+- Goal zone at bottom of slope
+- Downhill movement tuning (remove stamina drain, increase speed)
+- Basic UI (health, distance to goal, score)
+
+**Total:** ~1,800 lines of production code, ~400 lines of docs
 
 ---
 
