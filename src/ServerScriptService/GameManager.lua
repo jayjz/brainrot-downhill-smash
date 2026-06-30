@@ -260,6 +260,15 @@ function GameManager:GetState(): GameState
     return self.currentState
 end
 
-GameManager:Init()
+function GameManager:Destroy()
+    if self.hazardSpawner then
+        self.hazardSpawner:Stop()
+    end
+    if self.collisionDetector then
+        self.collisionDetector:Stop()
+    end
+    self.players = {}
+    print("[GameManager] Destroyed")
+end
 
 return GameManager

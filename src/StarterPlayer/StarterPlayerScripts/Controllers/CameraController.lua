@@ -211,7 +211,5 @@ function CameraController:GetCFrame(): CFrame
 	return cameraState.currentCFrame
 end
 
--- Initialize when required
-CameraController.Init()
 
 return CameraController

@@ -78,6 +78,21 @@ Chronological development log.
 
 ---
 
+## 2026-06-30
+
+### `TBD` — Step 1: Client/Server entry points
+**Date:** 2026-06-30
+
+**What was done:**
+- Created `ServerMain.server.lua` — server entry point, requires GameManager, calls Init() with error handling, cleanup on BindToClose
+- Created `ClientMain.client.lua` — client entry point, requires MovementController, CameraController, RagdollClient in order with error handling
+- Removed auto-Init() calls from `GameManager.lua`, `MovementController.lua`, `CameraController.lua`, `RagdollClient.lua`
+- Added `GameManager:Destroy()` for proper cleanup
+
+**Impact:** Game now actually runs on startup. Controllers initialize via explicit entry points instead of ModuleScript side effects. Foundation for Step 2-4 testing.
+
+---
+
 ## Planned
 
 See [PLAN.md](PLAN.md) for upcoming steps.

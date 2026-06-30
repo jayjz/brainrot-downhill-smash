@@ -190,7 +190,5 @@ function RagdollClient:ForceRecovery()
 	end
 end
 
--- Initialize on require
-RagdollClient.Init()
 
 return RagdollClient

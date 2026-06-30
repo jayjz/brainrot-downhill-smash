@@ -378,7 +378,5 @@ function MovementController.IsClimbing(): boolean
 	return movementState.isClimbing
 end
 
--- Initialize when script runs
-MovementController.Init()
 
 return MovementController
