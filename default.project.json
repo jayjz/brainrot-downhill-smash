@@ -19,6 +19,9 @@
         "RagdollTriggered": {
           "$className": "RemoteEvent"
         },
+        "RagdollRecovered": {
+          "$className": "RemoteEvent"
+        },
         "HazardHit": {
           "$className": "RemoteEvent"
         },

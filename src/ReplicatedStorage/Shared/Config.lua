@@ -26,8 +26,14 @@ Config.SLOPE = {
 -- Player movement
 Config.PLAYER = {
     WALK_SPEED = 16,
+    SPRINT_SPEED = 24,
     CLIMB_SPEED = 12,
+    CLIMB_SPEED_STEEP = 8,
     JUMP_POWER = 50,
+    JUMP_COOLDOWN = 0.5,
+    STAMINA_MAX = 100,
+    STAMINA_DRAIN_RATE = 15,
+    STAMINA_REGEN_RATE = 25,
     RAGDOLL_RECOVERY_TIME = 3, -- seconds
     RAGDOLL_INVULNERABILITY = 1, -- seconds
 }
