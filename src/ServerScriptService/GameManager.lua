@@ -218,7 +218,16 @@ function GameManager:StartRound()
     end
     
     if self.collisionDetector then
-        self.collisionDetector:Start()
+        -- Pass OnHazardHit callback to break circular dependency:
+        -- GameManager requires HazardCollisionDetector, so CollisionDetector
+        -- cannot require GameManager. Callback injection solves this.
+        -- CollisionDetector calls this when a hazard hit is detected server-side
+        -- (damage + knockback already applied by CollisionDetector).
+        -- GameManager handles: ragdollCount tracking, RagdollTriggered
+        -- RemoteEvent firing, recovery timer.
+        self.collisionDetector:Start(function(player: Player, hazardId: string, damage: number)
+            self:OnHazardHit(player, hazardId, damage)
+        end)
         print("[GameManager] Collision detector started")
     end
     

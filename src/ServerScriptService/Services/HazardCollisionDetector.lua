@@ -20,10 +20,18 @@ local HIT_COOLDOWN = 0.5 -- seconds
 function HazardCollisionDetector.new()
 	local self = setmetatable({}, HazardCollisionDetector)
 	self.activeConnections = {} :: {RBXScriptConnection}
+	self.onHazardHit = nil :: ((player: Player, hazardId: string, damage: number) -> ())?
 	return self
 end
 
-function HazardCollisionDetector:Start()
+function HazardCollisionDetector:Start(onHazardHit: ((player: Player, hazardId: string, damage: number) -> ())?)
+	-- Optional callback for hazard hit events. Used by GameManager to receive
+	-- server-side hit notifications (ragdollCount tracking, RagdollTriggered
+	-- RemoteEvent firing, recovery timer). Breaks the circular dependency:
+	-- GameManager requires HazardCollisionDetector, so CollisionDetector
+	-- cannot require GameManager. Callback injection solves this.
+	self.onHazardHit = onHazardHit
+
 	-- Listen for new hazards
 	local addedConn = CollectionService:GetInstanceAddedSignal("Hazard"):Connect(function(hazard)
 		self:_SetupHazardCollision(hazard)
@@ -78,14 +86,8 @@ function HazardCollisionDetector:_OnHazardTouched(hazard: BasePart, hit: BasePar
 	local hazardId = hazard:GetAttribute("HazardId") or "unknown"
 	local damage = hazard:GetAttribute("Damage") or 10
 	
-	-- Apply damage
+	-- Apply damage (server-authoritative)
 	humanoid:TakeDamage(damage)
-	
-	-- Fire to clients for ragdoll
-	local remote = ReplicatedStorage.RemoteEvents:FindFirstChild("HazardHit")
-	if remote then
-		remote:FireClient(player, hazardId, damage)
-	end
 	
 	-- Apply knockback
 	local rootPart = character:FindFirstChild("HumanoidRootPart")
@@ -104,12 +106,6 @@ function HazardCollisionDetector:_OnHazardTouched(hazard: BasePart, hit: BasePar
 		)
 	end
 	
-	-- Screen shake for victim
-	local shakeRemote = ReplicatedStorage.RemoteEvents:FindFirstChild("RagdollTriggered")
-	if shakeRemote then
-		shakeRemote:FireClient(player, hazardId, damage)
-	end
-	
 	-- Visual feedback - brief highlight
 	local highlight = Instance.new("Highlight")
 	highlight.FillColor = Color3.fromRGB(255, 0, 0)
@@ -119,6 +115,17 @@ function HazardCollisionDetector:_OnHazardTouched(hazard: BasePart, hit: BasePar
 	Debris:AddItem(highlight, 0.3)
 	
 	print(`[HazardCollisionDetector] {player.Name} hit by {hazard.Name} for {damage} damage`)
+	
+	-- Notify GameManager (ragdollCount tracking, RagdollTriggered RemoteEvent,
+	-- recovery timer). Callback injection breaks the circular dependency:
+	-- GameManager requires HazardCollisionDetector, so CollisionDetector
+	-- cannot require GameManager.
+	if self.onHazardHit then
+		local ok, err = pcall(self.onHazardHit, player, hazardId, damage)
+		if not ok then
+			warn(`[HazardCollisionDetector] onHazardHit callback failed: {err}`)
+		end
+	end
 end
 
 function HazardCollisionDetector:Stop()
@@ -127,6 +134,7 @@ function HazardCollisionDetector:Stop()
 	end
 	self.activeConnections = {}
 	recentHits = {}
+	self.onHazardHit = nil
 	print("[HazardCollisionDetector] Stopped")
 end
 

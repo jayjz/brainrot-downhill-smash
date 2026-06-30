@@ -26,15 +26,12 @@ function RagdollClient.Init()
 	
 	ragdollController = RagdollController.new(character)
 	
-	-- Listen for ragdoll trigger from server
+	-- Listen for ragdoll trigger from server.
+	-- Single source of truth: GameManager:OnHazardHit fires RagdollTriggered.
+	-- (Previously also listened to HazardHit — removed in BUG-003 fix to
+	-- eliminate duplicate ragdoll triggers.)
 	local ragdollRemote = ReplicatedStorage.RemoteEvents:WaitForChild("RagdollTriggered") :: RemoteEvent
 	ragdollRemote.OnClientEvent:Connect(function(hazardId: string, damage: number)
-		RagdollClient:TriggerRagdoll(hazardId, damage)
-	end)
-	
-	-- Also listen for direct HazardHit (fallback)
-	local hazardHitRemote = ReplicatedStorage.RemoteEvents:WaitForChild("HazardHit") :: RemoteEvent
-	hazardHitRemote.OnClientEvent:Connect(function(hazardId: string, damage: number)
 		RagdollClient:TriggerRagdoll(hazardId, damage)
 	end)
 	
