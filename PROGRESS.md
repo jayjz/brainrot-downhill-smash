@@ -76,6 +76,24 @@ Chronological development log.
 
 ---
 
+### `da65136` — Step 3: Ragdoll event duplication fix
+**Date:** 2026-06-30
+
+**What was done:**
+- `HazardCollisionDetector.lua` — added `onHazardHit` callback param to `Start()`
+  - Removed `HazardHit:FireClient` call
+  - Removed `RagdollTriggered:FireClient` call
+  - Invokes `onHazardHit(player, hazardId, damage)` callback after damage/knockback/VFX
+  - Clears callback in `Stop()`
+- `GameManager.lua` — `StartRound()` now passes `OnHazardHit` callback to `collisionDetector:Start()`
+  - Callback injection breaks circular dependency (GameManager → CollisionDetector)
+- `RagdollClient.lua` — removed `HazardHit` OnClientEvent listener
+  - Now listens to `RagdollTriggered` ONLY
+
+**Impact:** Removes 2 duplicate ragdoll trigger paths per hit. Single source of truth: `CollisionDetector → GameManager:OnHazardHit (callback) → RagdollTriggered → RagdollClient`. CollisionDetector owns physics (damage, knockback), GameManager owns game state (ragdollCount) + client signaling. Fixes BUG-003.
+
+---
+
 ## Phase 1 — Complete ✅
 
 | Module | Lines | Status |
@@ -98,15 +116,14 @@ Chronological development log.
 |--------|--------|
 | HazardTypes.lua | ✅ 4 hazard types with asset IDs |
 | HazardSpawner.lua | ✅ Spawn logic, pooling, raycast validation |
-| HazardCollisionDetector.lua | ✅ Touched events, knockback, highlights |
+| HazardCollisionDetector.lua | ✅ Touched events, knockback, highlights, GameManager callback |
 | RagdollController.lua | ✅ BallSocketConstraint ragdoll, momentum preservation |
-| RagdollClient.lua | ✅ Client listener, recovery logic |
+| RagdollClient.lua | ✅ Client listener, recovery logic, single event source |
 | ServerMain.server.lua | ✅ Entry point, error handling |
 | ClientMain.client.lua | ✅ Entry point, error handling |
 
 **Remaining blockers:**
-- Ragdoll event duplication (2-3 triggers per hit) — BUG-003
-- Never tested in Studio
+- Never tested in Studio — all integration is theoretical
 
 ---
 

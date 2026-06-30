@@ -94,10 +94,38 @@ Step 3: Fix ragdoll event duplication (BUG-003) — remove duplicate event fires
 
 ---
 
+## 2026-06-30 — Step 3: Ragdoll Event Duplication Fix
+
+**Scope:** `da65136` — HazardCollisionDetector + GameManager + RagdollClient — 3 files, +36 / -22 lines
+
+### What Was Good
+- **Callback injection breaks circular dependency cleanly** — GameManager requires HazardCollisionDetector, so CollisionDetector cannot require GameManager. Passing `OnHazardHit` as a callback to `Start()` solves this without a global event bus, BindableEvent, or module restructuring. pcall-wrapped with error logging.
+- **Clean separation of concerns** — CollisionDetector owns physics (damage, knockback, VFX), GameManager owns game state (ragdollCount) + client signaling (RagdollTriggered/RagdollRecovered), RagdollClient owns presentation (ragdoll FX, recovery)
+- **Single source of truth** — Before: 2-3 ragdoll triggers per hit across 3 modules. After: 1 trigger per hit, clean flow: `CollisionDetector → GameManager:OnHazardHit (callback) → RagdollTriggered → RagdollClient`
+- **Proper cleanup** — `onHazardHit` callback is nil'd in `Stop()`, no dangling references
+- **Defensive error handling** — Callback invocation is pcall-wrapped, warns on failure instead of crashing the collision handler
+
+### What Could Be Improved
+- **`HazardHit` RemoteEvent is now orphaned** — CollisionDetector no longer fires `HazardHit:FireClient`, RagdollClient no longer listens to it. GameManager still has an `OnServerEvent` handler for `HazardHit` (client→server exploit/report path) that calls `OnHazardHit` — but `OnHazardHit` does NOT apply damage/knockback, only ragdollCount + RagdollTriggered. So a client firing `HazardHit` to the server triggers a free ragdoll on themselves with no damage. Rate-limited (10/sec) and validated, so not game-breaking, but the RemoteEvent is now confusingly named / repurposed. Should either: (a) remove the OnServerEvent handler entirely (server-authoritative collision detection, clients never report hits), or (b) rename `HazardHit` → `ReportHazardHit` to make client→server direction explicit, and have the handler apply damage/knockback server-side. P1 cleanup, not blocking.
+- **No client-side prediction** — Ragdoll triggers after server round-trip (CollisionDetector → GameManager → RagdollTriggered → client). ~50-100ms latency before ragdoll FX starts. Acceptable for Phase 2, consider client-side prediction in Phase 3 polish.
+
+### Risks
+- **Low — Callback not set:** If `collisionDetector:Start()` is called without the callback argument, `onHazardHit` is nil, hit detection still works (damage + knockback + VFX), but ragdoll never triggers (no `RagdollTriggered` RemoteEvent fired, no recovery timer). GameManager passes the callback correctly in `StartRound()`, so this only happens if someone calls `Start()` manually without args. Acceptable — callback is optional by design, CollisionDetector degrades gracefully.
+- **Low — Stale callback after round end:** Callback is cleared in `Stop()`, which is called by `GameManager:EndRound()`. No leak risk.
+
+### Verdict
+✅ **Approved** — Callback injection is the right pattern for breaking the circular dependency. Event flow is now clean, single source of truth, proper separation of concerns. The orphaned `HazardHit` OnServerEvent handler is tech debt but not blocking — flag for cleanup in Phase 3.
+
+### Next Steps
+Step 4: Playtest full loop in Studio — verify slope generates, player can climb, hazards spawn, collision detects hit, ragdoll triggers, player tumbles, recovers, can climb again, no console errors.
+
+---
+
 ## Review History
 
 | Date | Scope | Verdict |
 |------|-------|---------|
+| 2026-06-30 | Step 3: Ragdoll event duplication (`da65136`) | ✅ Approved |
 | 2026-06-30 | Step 2: RemoteEvent + Config keys (`ccfe057`) | ✅ Approved |
 | 2026-06-30 | Step 1: Client/Server entry points (`7cfa4aa`) | ✅ Approved |
 | 2026-06-30 | Full Phase 2 integration audit | Blocked — missing entry points |

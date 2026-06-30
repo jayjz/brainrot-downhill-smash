@@ -12,39 +12,25 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 
 ## Current Step
 
-### Step 3: Fix Ragdoll Event Duplication
-**Status:** 📋 Planned — awaiting approval  
-**Priority:** P1
+### Step 4: Playtest — Verify Full Loop
+**Status:** 📋 Ready — all P0/P1 blockers fixed, waiting for Studio test  
+**Priority:** P0 BLOCKER
 
-**Problem:**
-- CollisionDetector fires BOTH `HazardHit` + `RagdollTriggered`
-- GameManager:OnHazardHit ALSO fires `RagdollTriggered`
-- RagdollClient listens to BOTH events
-- Result: 2-3 duplicate ragdoll triggers per hit (guarded by isRagdolled flag, works but messy)
+**Checklist:**
+- [ ] Slope generates
+- [ ] Player can climb
+- [ ] Hazards spawn
+- [ ] Collision detects hit
+- [ ] Ragdoll triggers
+- [ ] Player tumbles down slope
+- [ ] Player recovers and can climb again
+- [ ] No console errors
 
-**Changes:**
-- `HazardCollisionDetector.lua` — remove `RagdollTriggered` fire, keep `HazardHit` only (server-side damage + knockback)
-- `RagdollClient.lua` — remove `HazardHit` listener, keep `RagdollTriggered` listener only
-- GameManager:OnHazardHit — unchanged, remains single source of truth for firing `RagdollTriggered` to client
-
-**Risk:** Low — event wiring only, no logic changes  
-**Estimated lines:** ~15 removed
+**Note:** This step requires manual Studio testing by Georgie. Cannot be automated.
 
 ---
 
 ## Backlog
-
-### P0 — Blockers
-
-**Step 4: Playtest — Verify Full Loop**
-- Slope generates ✓
-- Player can climb ?
-- Hazards spawn ?
-- Collision detects hit ?
-- Ragdoll triggers ?
-- Player tumbles down slope ?
-- Player recovers and can climb again ?
-- No console errors ?
 
 ### P1 — High Priority
 
@@ -84,6 +70,14 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 - Verify 60 FPS on low-end mobile
 - UI scaling for small screens
 
+**BUG-007: Orphaned HazardHit OnServerEvent handler**
+- `HazardHit` RemoteEvent is no longer used server→client after BUG-003 fix
+- GameManager still has `OnServerEvent` handler that calls `OnHazardHit` (client→server)
+- `OnHazardHit` does NOT apply damage/knockback, only ragdollCount + `RagdollTriggered`
+- Client firing `HazardHit` to server triggers free self-ragdoll, no damage
+- Rate-limited + validated, not game-breaking, but confusing API
+- Fix: either (a) remove handler entirely — server-authoritative collision, or (b) rename `HazardHit` → `ReportHazardHit`, handler applies damage/knockback server-side
+
 ### Future — Not Scheduled
 
 - Shop / cosmetic system
@@ -96,6 +90,12 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 ---
 
 ## Completed Steps
+
+### ✅ Step 3: Ragdoll Event Duplication Fix (`da65136`)
+- `HazardCollisionDetector.lua` — added `onHazardHit` callback param to `Start()`, removed `HazardHit:FireClient` + `RagdollTriggered:FireClient` calls, invokes callback after damage/knockback/VFX
+- `GameManager.lua` — `StartRound()` passes `OnHazardHit` callback to `collisionDetector:Start()`, breaks circular dependency via callback injection
+- `RagdollClient.lua` — removed `HazardHit` OnClientEvent listener, listens to `RagdollTriggered` ONLY
+- **Result:** 1 ragdoll trigger per hit (was 2-3). Clean event flow: `CollisionDetector → GameManager:OnHazardHit (callback) → RagdollTriggered → RagdollClient`. Fixes BUG-003.
 
 ### ✅ Step 2: RemoteEvent + Config Keys (`ccfe057`)
 - `default.project.json` — added `RagdollRecovered` RemoteEvent

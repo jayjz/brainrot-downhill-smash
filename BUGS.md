@@ -6,19 +6,7 @@ Known issues, tracked by priority.
 
 ## P1 — High Priority (game works but broken)
 
-### BUG-003: Ragdoll event duplication — 2-3 triggers per hit
-**Status:** Open  
-**Found:** 2026-06-30
-
-**Description:**
-- `HazardCollisionDetector:_OnHazardTouched` fires BOTH `HazardHit` AND `RagdollTriggered` remotes
-- `GameManager:OnHazardHit` ALSO fires `RagdollTriggered`
-- `RagdollClient` listens to BOTH `HazardHit` AND `RagdollTriggered`, calls `TriggerRagdoll` on both
-
-**Impact:** 2-3 duplicate ragdoll triggers per hit. Currently guarded by `isRagdolled` flag so it "works", but brittle and messy.
-
-**Fix:** Single source of truth — CollisionDetector → HazardHit only, GameManager → RagdollTriggered only, RagdollClient listens to RagdollTriggered only.  
-**Planned:** PLAN.md Step 3
+_None — all P1 blockers fixed._
 
 ---
 
@@ -50,7 +38,30 @@ Known issues, tracked by priority.
 
 ---
 
+### BUG-007: Orphaned HazardHit OnServerEvent handler
+**Status:** Open  
+**Found:** 2026-06-30
+
+**Description:** After BUG-003 fix, `HazardHit` RemoteEvent is no longer used server→client. `GameManager:_SetupRemoteHandlers` still has an `OnServerEvent` handler for `HazardHit` (client→server) that calls `OnHazardHit`. But `OnHazardHit` does NOT apply damage/knockback — only ragdollCount + `RagdollTriggered` RemoteEvent. So a client firing `HazardHit` to the server triggers a free ragdoll on themselves with no damage.
+
+**Impact:** Exploit path — client can self-ragdoll. Rate-limited (10/sec) and validated, not game-breaking (they ragdoll themselves), but confusing API design.
+
+**Fix:** Either (a) remove the `OnServerEvent` handler entirely — server-authoritative collision detection, clients never report hits, or (b) rename `HazardHit` → `ReportHazardHit` to make client→server direction explicit, and have the handler apply damage/knockback server-side.
+
+---
+
 ## Fixed
+
+### BUG-003: Ragdoll event duplication — 2-3 triggers per hit
+**Status:** ✅ Fixed in `da65136`  
+**Found:** 2026-06-30  
+**Fixed:** 2026-06-30
+
+**Description:** `HazardCollisionDetector` fired both `HazardHit` + `RagdollTriggered`, `GameManager:OnHazardHit` fired `RagdollTriggered` again, `RagdollClient` listened to both events → 2-3 duplicate ragdoll triggers per hit.
+
+**Fix:** Callback injection — `collisionDetector:Start(onHazardHit)` breaks circular dependency (GameManager → CollisionDetector). CollisionDetector now calls `onHazardHit(player, hazardId, damage)` after damage/knockback/VFX. GameManager handles ragdollCount + `RagdollTriggered` RemoteEvent + recovery timer. RagdollClient listens to `RagdollTriggered` ONLY. Single source of truth, clean event flow: `CollisionDetector → GameManager:OnHazardHit (callback) → RagdollTriggered → RagdollClient`.
+
+---
 
 ### BUG-006: MovementController Config keys missing
 **Status:** ✅ Fixed in `ccfe057`  
