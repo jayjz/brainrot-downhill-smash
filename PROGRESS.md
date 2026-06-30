@@ -80,7 +80,7 @@ Chronological development log.
 
 ## 2026-06-30
 
-### `TBD` — Step 1: Client/Server entry points
+### `7cfa4aa` — Step 1: Client/Server entry points
 **Date:** 2026-06-30
 
 **What was done:**

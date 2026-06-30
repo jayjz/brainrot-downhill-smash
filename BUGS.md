@@ -6,31 +6,34 @@ Known issues, tracked by priority.
 
 ## P0 — Blockers (game doesn't work)
 
-### BUG-001: No entry point scripts — game does nothing on startup
-**Status:** Open  
-**Found:** 2026-06-30
-
-**Description:** All controllers are ModuleScripts with auto-Init(), but nothing requires them.
-- Server: `GameManager.lua` calls `Init()` at module load, nobody requires it
-- Client: `MovementController`, `CameraController`, `RagdollClient` all auto-Init(), nobody requires them
-
-**Impact:** Game does literally nothing in Studio unless files are manually required.
-
-**Fix:** Add `ServerMain.server.lua` + `ClientMain.client.lua` entry points.  
-**Planned:** PLAN.md Step 1
-
----
-
 ### BUG-002: Missing RemoteEvent — RagdollRecovered
 **Status:** Open  
 **Found:** 2026-06-30
 
 **Description:** `RagdollRecovered` is defined in `Config.REMOTES` but missing from `default.project.json` RemoteEvents folder.
 
-**Impact:** `GameManager:OnHazardHit:179` calls `remotes:FindFirstChild(Config.REMOTES.RAGDOLL_RECOVERED)` → returns nil → `FireClient` fails silently (guarded by `if recoverRemote` check, so no crash, but recovery signal never fires).
+**Impact:** `GameManager:OnHazardHit` calls `remotes:FindFirstChild(Config.REMOTES.RAGDOLL_RECOVERED)` → returns nil → `FireClient` fails silently (guarded by `if recoverRemote` check, so no crash, but recovery signal never fires).
 
 **Fix:** Add `"RagdollRecovered": { "$className": "RemoteEvent" }` to `default.project.json`.  
 **Planned:** PLAN.md Step 2
+
+---
+
+### BUG-006: MovementController Config keys missing
+**Status:** Open  
+**Found:** 2026-06-30
+
+**Description:** `MovementController.lua` references Config keys that don't exist in `Config.lua`:
+- `Config.PLAYER.STAMINA_MAX` (missing)
+- `Config.PLAYER.SPRINT_SPEED` (missing)
+- `Config.PLAYER.CLIMB_SPEED_STEEP` (missing)
+- `Config.PLAYER.STAMINA_DRAIN_RATE` (missing)
+- `Config.PLAYER.STAMINA_REGEN_RATE` (missing)
+- `Config.PLAYER.JUMP_COOLDOWN` (missing)
+
+**Impact:** Runtime nil errors on first frame. Blocks playtesting.
+
+**Fix:** Add missing keys to `Config.PLAYER` table with sensible defaults.
 
 ---
 
@@ -82,4 +85,11 @@ Known issues, tracked by priority.
 
 ## Fixed
 
-_None yet — project is pre-playtest._
+### BUG-001: No entry point scripts — game does nothing on startup
+**Status:** ✅ Fixed in `7cfa4aa`  
+**Found:** 2026-06-30  
+**Fixed:** 2026-06-30
+
+**Description:** All controllers are ModuleScripts with auto-Init(), but nothing requires them.
+
+**Fix:** Added `ServerMain.server.lua` + `ClientMain.client.lua` entry points. Removed auto-Init() from GameManager and all 3 client controllers. Added `GameManager:Destroy()`.

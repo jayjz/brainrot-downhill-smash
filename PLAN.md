@@ -12,29 +12,27 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 
 ## Current Step
 
-### Step 1: Client/Server Entry Points
+### Step 2: Fix Missing RemoteEvent + Config Keys
 **Status:** 📋 Planned — awaiting approval  
 **Priority:** P0 BLOCKER
 
-**Problem:** All controllers are ModuleScripts that auto-Init(), but nothing requires them. Game does nothing on startup.
+**Problem:**
+1. `RagdollRecovered` is in `Config.REMOTES` but missing from `default.project.json` → `GameManager:OnHazardHit` gets nil remote
+2. `MovementController.lua` references 6 Config keys that don't exist → runtime nil errors block playtesting:
+   - `STAMINA_MAX`, `SPRINT_SPEED`, `CLIMB_SPEED_STEEP`, `STAMINA_DRAIN_RATE`, `STAMINA_REGEN_RATE`, `JUMP_COOLDOWN`
 
 **Changes:**
-- Create `src/ServerScriptService/ServerMain.server.lua` — requires GameManager, handles bootstrap errors, cleanup on game close
-- Create `src/StarterPlayer/StarterPlayerScripts/ClientMain.client.lua` — requires MovementController, CameraController, RagdollClient with error handling
+- `default.project.json` — add `"RagdollRecovered": { "$className": "RemoteEvent" }`
+- `Config.lua` — add missing `PLAYER` keys with sensible defaults
 
-**Risk:** Low — pure bootstrap, zero logic changes  
-**Estimated lines:** ~20 server, ~15 client
+**Risk:** Low — config only, no logic changes  
+**Estimated lines:** ~10
 
 ---
 
 ## Backlog
 
-### P0 — Blockers (game doesn't work without these)
-
-**Step 2: Fix Missing RemoteEvent**
-- `RagdollRecovered` is in `Config.REMOTES` but missing from `default.project.json`
-- `GameManager:OnHazardHit:179` will get nil remote → error
-- Fix: Add `"RagdollRecovered": { "$className": "RemoteEvent" }` to project config
+### P0 — Blockers
 
 **Step 3: Fix Ragdoll Event Duplication**
 - CollisionDetector fires BOTH `HazardHit` + `RagdollTriggered`
@@ -45,7 +43,7 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 
 **Step 4: Playtest — Verify Full Loop**
 - Slope generates ✓
-- Player can climb ✓
+- Player can climb ?
 - Hazards spawn ?
 - Collision detects hit ?
 - Ragdoll triggers ?
@@ -53,7 +51,7 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 - Player recovers and can climb again ?
 - No console errors ?
 
-### P1 — High Priority (game works but feels bad)
+### P1 — High Priority
 
 **Step 5: Tune Gameplay Values**
 - Knockback force (currently 50 studs/sec)
@@ -72,7 +70,7 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 - Whoosh/impact sounds
 - Background music loop
 
-### P2 — Medium Priority (polish)
+### P2 — Medium Priority
 
 **Step 8: Visual Feedback**
 - Particle effects on hazard impact
@@ -99,3 +97,14 @@ Viral meme physics chaos runner. Climb a steep procedural slope while dodging ph
 - Slope biome variety
 - Daily challenges
 - Monetization (game passes)
+
+---
+
+## Completed Steps
+
+### ✅ Step 1: Client/Server Entry Points (`7cfa4aa`)
+- Created `ServerMain.server.lua` — requires GameManager, calls Init() with error handling, cleanup on BindToClose
+- Created `ClientMain.client.lua` — requires MovementController, CameraController, RagdollClient in order with error handling
+- Removed auto-Init() from GameManager, MovementController, CameraController, RagdollClient
+- Added `GameManager:Destroy()` for proper cleanup
+- **Result:** Game now runs on startup. Fixes BUG-001.

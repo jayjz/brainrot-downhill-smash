@@ -42,8 +42,37 @@ Self-review log for major changes.
 
 ---
 
+## 2026-06-30 — Step 1: Client/Server Entry Points
+
+**Scope:** `7cfa4aa` — ServerMain.server.lua + ClientMain.client.lua + removed auto-Init from 4 modules
+
+### What Was Good
+- **Clean separation** — Entry points own bootstrap/error handling, modules own logic, no side effects on require
+- **Error handling** — Both ServerMain and ClientMain wrap Init() calls in pcall, log failures per-controller
+- **Proper cleanup** — Added `GameManager:Destroy()` with BindToClose hook on server
+- **Init ordering** — ClientMain initializes Movement → Camera → Ragdoll in logical dependency order
+- **Minimal change** — Only removed auto-Init calls, no logic changes, low risk
+
+### What Could Be Improved
+- **MovementController has Config key mismatches** — References `Config.PLAYER.STAMINA_MAX`, `SPRINT_SPEED`, `CLIMB_SPEED_STEEP`, `STAMINA_DRAIN_RATE`, `STAMINA_REGEN_RATE`, `JUMP_COOLDOWN` which don't exist in Config.lua. Will crash at runtime. Not introduced by this commit, pre-existing bug.
+- **No controller Destroy() methods** — ClientMain can init but not clean up controllers. OK for Phase 2, add later.
+- **Init is not idempotent** — Calling Init() twice would double-connect events. Client controllers guard against this (MovementController doesn't, others unclear). Low risk since ClientMain only calls once.
+
+### Risks
+- **Medium — Config key mismatch crash:** MovementController will error on first frame when accessing nil Config values. Blocks playtesting. Should be fixed before Step 2 or as part of Step 4 playtest prep.
+- **Low — Double Init:** If someone manually requires a controller module, it won't auto-init (correct now), but if ClientMain runs twice (respawn edge case?) events could double-connect.
+
+### Verdict
+✅ **Approved** — Entry points are clean, error handling is solid, separation of concerns is correct. The Config mismatch is pre-existing and out of scope for Step 1.
+
+### Next Steps
+Step 2: Fix missing RagdollRecovered RemoteEvent (BUG-002) — 1-line JSON change, 2 min.
+
+---
+
 ## Review History
 
 | Date | Scope | Verdict |
 |------|-------|---------|
+| 2026-06-30 | Step 1: Client/Server entry points (`7cfa4aa`) | ✅ Approved |
 | 2026-06-30 | Full Phase 2 integration audit | Blocked — missing entry points |
